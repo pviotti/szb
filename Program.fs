@@ -35,10 +35,12 @@ let main argv =
     let path = Directory.GetCurrentDirectory()
     let lsF = lsFiles path
     let lsD = lsDirs path
-    let print entries =
-        Seq.map getSize entries |>
-            Seq.zip entries |>
+    let sizeF = Seq.map getSize lsF
+    let sizeD = Seq.map getSize lsD
+    let print ls sizes =
+            Seq.zip ls sizes |>
             Seq.iter printFormatted
-    print lsD
-    print lsF
+    print lsD sizeD
+    print lsF sizeF
+    printfn "-----------\n%10iB" (Seq.append sizeF sizeD |> Seq.sum)
     0
