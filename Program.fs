@@ -16,15 +16,15 @@ let rec getSize path =
         printfn "Error: %s" ex.Message
         0L
 
+let sizeUnits = [ "B"; "KiB"; "MiB"; "GiB"; "TiB"; "PiB"; "EiB" ]
 let getSizeString (bytes: int64) =
-    let sizeUnit = [ "B"; "KiB"; "MiB"; "TiB"; "PiB"; "EiB" ]
     if bytes = 0L then
-        (0.0, sizeUnit.[0])
+        (0.0, sizeUnits.[0])
     else
         let bytesF = float (bytes)
-        let sizeUnitIdx = Math.Floor(Math.Log(bytesF, 1024.0))
-        let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitIdx), 0)
-        (num, sizeUnit.[int (sizeUnitIdx)])
+        let sizeUnitsIdx = Math.Floor(Math.Log(bytesF, 1024.0))
+        let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitsIdx), 0)
+        (num, sizeUnits.[int (sizeUnitsIdx)])
 
 let printFormatted (path: string, size: int64) =
     let name = Array.last (path.Split '/')
