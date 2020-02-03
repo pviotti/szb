@@ -13,7 +13,7 @@ let rec getSize path =
         else
             (new FileInfo(path)).Length
     with ex ->
-        printfn "Error: %s" ex.Message
+        eprintfn "Error: %s" ex.Message
         0L
 
 let sizeUnits = [ "B"; "KiB"; "MiB"; "GiB"; "TiB"; "PiB"; "EiB" ]
