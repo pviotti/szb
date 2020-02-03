@@ -6,24 +6,18 @@ let enumAllEntries dir =
     enOpt.RecurseSubdirectories <- true
     Directory.GetFileSystemEntries(dir, "*", enOpt)
 
-let getFileSize filePath =
-    (new FileInfo(filePath)).Length
-
-let getDirectorySize dirPath =
-    enumAllEntries dirPath |>
-                Seq.map getFileSize |>
-                Seq.sum
-
 let lsFiles dir = Directory.EnumerateFiles dir
 let lsDirs dir = Directory.EnumerateDirectories dir
 
-let getSize path =
+let rec getSize path =
     try
         let attr = File.GetAttributes path
         if attr.HasFlag FileAttributes.Directory then
-            getDirectorySize path
+            enumAllEntries path |>
+                Seq.map getSize |>
+                Seq.sum
         else
-            getFileSize path
+            (new FileInfo(path)).Length
     with
     | :? Exception as ex ->
         printfn "Error: %s" ex.Message
