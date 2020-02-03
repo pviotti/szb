@@ -1,19 +1,12 @@
 ﻿open System
 open System.IO
-
-let enumAllEntries dir =
-    let enOpt = new EnumerationOptions()
-    enOpt.RecurseSubdirectories <- true
-    Directory.GetFileSystemEntries(dir, "*", enOpt)
-
-let lsFiles dir = Directory.EnumerateFiles dir
-let lsDirs dir = Directory.EnumerateDirectories dir
+type Dir = Directory
 
 let rec getSize path =
     try
         let attr = File.GetAttributes path
         if attr.HasFlag FileAttributes.Directory then
-            enumAllEntries path |>
+            Dir.EnumerateFileSystemEntries path |>
                 Seq.map getSize |>
                 Seq.sum
         else
@@ -35,15 +28,15 @@ let getSizeString (bytes:int64) =
 
 let printFormatted (path:string, size:int64) =
     let name = Array.last (path.Split '/')
-    let (size, sizeUnit) = getSizeString size
-    printfn "%10.0f %-3s %s" size sizeUnit name
+    let (newSize, sizeUnit) = getSizeString size
+    printfn "%10.0f %-3s %s %i" newSize sizeUnit name size
 
 
 [<EntryPoint>]
 let main argv =
-    let path = if argv.Length > 0 then argv.[0] else Directory.GetCurrentDirectory()
-    let lsF = lsFiles path
-    let lsD = lsDirs path
+    let path = if argv.Length > 0 then argv.[0] else Dir.GetCurrentDirectory()
+    let lsF = Dir.EnumerateFiles path
+    let lsD = Dir.EnumerateDirectories path
     let sizeF = Seq.map getSize lsF
     let sizeD = Seq.map getSize lsD
     let sizeTot = Seq.append sizeF sizeD |> Seq.sum
@@ -53,5 +46,5 @@ let main argv =
     print lsD sizeD
     print lsF sizeF
     printfn "%s" (String.replicate 14 "-")
-    printFormatted("", sizeTot)
+    printFormatted ("", sizeTot)
     0
