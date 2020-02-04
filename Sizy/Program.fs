@@ -29,7 +29,7 @@ let getSizeString (bytes: int64) =
 let printFormatted (path: string, size: int64) =
     let name = Array.last (path.Split '/')
     let (newSize, sizeUnit) = getSizeString size
-    printfn "%10.0f %-3s %s %i" newSize sizeUnit name size
+    printfn "%10.0f %-3s %s" newSize sizeUnit name
 
 
 [<EntryPoint>]
