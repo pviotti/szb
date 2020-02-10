@@ -1,7 +1,9 @@
 open System
 open System.IO
+open FSharp.Collections.ParallelSeq
 
 type Dir = Directory
+let sizeUnits = [ "B"; "KiB"; "MiB"; "GiB"; "TiB"; "PiB"; "EiB" ]
 
 let rec getSize path =
     try
@@ -16,7 +18,6 @@ let rec getSize path =
         eprintfn "Error: %s" ex.Message
         0L
 
-let sizeUnits = [ "B"; "KiB"; "MiB"; "GiB"; "TiB"; "PiB"; "EiB" ]
 let getSizeString (bytes: int64) =
     if bytes = 0L then
         (0.0, sizeUnits.[0])
@@ -31,20 +32,23 @@ let printFormatted (path: string, size: int64) =
     let (newSize, sizeUnit) = getSizeString size
     printfn "%10.0f %-3s %s" newSize sizeUnit name
 
+let sizyMain path =
+    let lsF = Dir.EnumerateFiles path
+    let lsD = Dir.EnumerateDirectories path
+    let sizeF = PSeq.map getSize lsF
+    let sizeD = PSeq.map getSize lsD
+    let sizeTot = PSeq.append sizeF sizeD |> PSeq.sum
+    let print ls sizes = PSeq.zip ls sizes |> Seq.iter printFormatted
+    print lsD sizeD
+    print lsF sizeF
+    printfn "%s" (String.replicate 14 "-")
+    printFormatted ("", sizeTot)
 
 [<EntryPoint>]
 let main argv =
     let path =
         if argv.Length > 0 then argv.[0] else Dir.GetCurrentDirectory()
-
-    let lsF = Dir.EnumerateFiles path
-    let lsD = Dir.EnumerateDirectories path
-    let sizeF = Seq.map getSize lsF
-    let sizeD = Seq.map getSize lsD
-    let sizeTot = Seq.append sizeF sizeD |> Seq.sum
-    let print ls sizes = Seq.zip ls sizes |> Seq.iter printFormatted
-    print lsD sizeD
-    print lsF sizeF
-    printfn "%s" (String.replicate 14 "-")
-    printFormatted ("", sizeTot)
+    let stopWatch = Diagnostics.Stopwatch.StartNew()
+    sizyMain path
+    printfn "%f" stopWatch.Elapsed.TotalMilliseconds
     0
