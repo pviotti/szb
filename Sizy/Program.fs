@@ -9,6 +9,8 @@ open FSharp.Collections.ParallelSeq
 type Dir = Directory
 let sizeUnits = [ "B"; "KiB"; "MiB"; "GiB"; "TiB"; "PiB"; "EiB" ]
 
+let mutable errors = List.empty<string>
+
 let rec getSize path =
     try
         let attr = File.GetAttributes path
@@ -18,7 +20,8 @@ let rec getSize path =
         else
             FileInfo(path).Length
     with ex ->
-        eprintfn "Error: %s" ex.Message
+        errors <- List.singleton path |> List.append errors 
+        //eprintfn "Error: %s" ex.Message
         0L
 
 let getSizeString (bytes: int64) =
@@ -47,6 +50,12 @@ let sizyMain path =
     printfn "%s" (String.replicate 14 "-")
     printFormatted ("", sizeTot)
 
+let sizyMain2 path =
+    let ls = Dir.EnumerateFileSystemEntries path
+    let sizes = PSeq.map getSize ls
+    let tot = PSeq.sum sizes
+    printFormatted("", tot)
+
 [<EntryPoint>]
 let main argv =
     match Config.getConfiguration argv with
@@ -54,8 +63,9 @@ let main argv =
         let path =
             if config.Contains InputPath then config.GetResult InputPath else Dir.GetCurrentDirectory()
         let stopWatch = Diagnostics.Stopwatch.StartNew()
-        sizyMain path
+        sizyMain2 path
         eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
+        String.concat " - " errors |> eprintfn "Path errors: %s" 
         0
     | ReturnVal ret ->
         ret
