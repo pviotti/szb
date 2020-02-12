@@ -1,3 +1,7 @@
+module Sizy.Program
+
+open Sizy.Config
+
 open System
 open System.IO
 open FSharp.Collections.ParallelSeq
@@ -45,9 +49,13 @@ let sizyMain path =
 
 [<EntryPoint>]
 let main argv =
-    let path =
-        if argv.Length > 0 then argv.[0] else Dir.GetCurrentDirectory()
-    let stopWatch = Diagnostics.Stopwatch.StartNew()
-    sizyMain path
-    printfn "%f" stopWatch.Elapsed.TotalMilliseconds
-    0
+    match Config.getConfiguration argv with
+    | Config config ->
+        let path =
+            if config.Contains InputPath then config.GetResult InputPath else Dir.GetCurrentDirectory()
+        let stopWatch = Diagnostics.Stopwatch.StartNew()
+        sizyMain path
+        eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
+        0
+    | ReturnVal ret ->
+        ret
