@@ -10,10 +10,9 @@ let rec getSize path =
         let attr = File.GetAttributes path
         if attr.HasFlag FileAttributes.Directory then
             Dir.EnumerateFileSystemEntries path
-            |> Seq.map getSize
-            |> Seq.sum
+            |> Seq.sumBy getSize
         else
-            (new FileInfo(path)).Length
+            FileInfo(path).Length
     with ex ->
         eprintfn "Error: %s" ex.Message
         0L
@@ -28,7 +27,7 @@ let getSizeString (bytes: int64) =
         (num, sizeUnits.[int (sizeUnitsIdx)])
 
 let printFormatted (path: string, size: int64) =
-    let name = Array.last (path.Split '/')
+    let name = Array.last (path.Split Path.DirectorySeparatorChar)
     let (newSize, sizeUnit) = getSizeString size
     printfn "%10.0f %-3s %s" newSize sizeUnit name
 
