@@ -1,4 +1,4 @@
-﻿module Sizy.Config
+module Sizy.Config
 
 open System
 open Argu
@@ -9,7 +9,7 @@ let PROGRAM_NAME = "sizy"
 
 type Args =
     | [<NoAppSettings>] Version
-    | [<AltCommandLine("-p")>] Percentage 
+    | [<AltCommandLine("-p")>] Percentage
     | [<MainCommand>] InputPath of path: string
     interface IArgParserTemplate with
         member s.Usage =
@@ -28,12 +28,13 @@ let printVersion() = printfn "%s version %s" PROGRAM_NAME VERSION
 let getConfiguration argv =
     let errorHandler =
         ProcessExiter
-            (colorizer = function
-             | ErrorCode.HelpText -> None
-             | _ -> Some ConsoleColor.Red)
+            (colorizer =
+                function
+                | ErrorCode.HelpText -> None
+                | _ -> Some ConsoleColor.Red)
 
     let parser = ArgumentParser.Create<Args>(programName = PROGRAM_NAME, errorHandler = errorHandler)
-    let config = parser.Parse(argv, ignoreMissing=true)
+    let config = parser.Parse(argv, ignoreMissing = true)
 
     if config.Contains Version then
         printVersion()
