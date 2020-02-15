@@ -54,12 +54,13 @@ let sizyMain path =
     let ls = Dir.EnumerateFileSystemEntries path
     let sizes = PSeq.map getSize ls
     let totSize, sizeUnit = getSizeString (PSeq.sum sizes)
-    PSeq.filter (fun x -> entries.ContainsKey x && entries.[x].isDir) ls
-    |> PSeq.sort
-    |> Seq.iter printFormatted
-    PSeq.filter (fun x -> entries.ContainsKey x && not entries.[x].isDir) ls
-    |> PSeq.sort
-    |> Seq.iter printFormatted
+
+    let print filter =
+        PSeq.filter filter ls
+        |> PSeq.sort
+        |> Seq.iter printFormatted
+    print (fun x -> entries.ContainsKey x && entries.[x].isDir)
+    print (fun x -> entries.ContainsKey x && not entries.[x].isDir)
     printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize sizeUnit
 
 [<EntryPoint>]
