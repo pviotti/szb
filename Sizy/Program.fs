@@ -4,24 +4,32 @@ open Sizy.Config
 
 open System
 open System.IO
+open System.Collections.Concurrent
 open FSharp.Collections.ParallelSeq
 
 type Dir = Directory
-let sizeUnits = [ "B"; "KiB"; "MiB"; "GiB"; "TiB"; "PiB"; "EiB" ]
+let sizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
-let mutable errors = List.empty<string>
+type Entry(path: string, size: int64, isDir: bool) =
+    member this.path = Array.last (path.Split Path.DirectorySeparatorChar) + if isDir then "/" else ""
+    member this.size = size
+    member this.isDir = isDir
+
+let errors = ConcurrentDictionary<string, string>()
+let entries = ConcurrentDictionary<string, Entry>()
 
 let rec getSize path =
     try
         let attr = File.GetAttributes path
-        if attr.HasFlag FileAttributes.Directory then
-            Dir.EnumerateFileSystemEntries path
-            |> Seq.sumBy getSize
-        else
-            FileInfo(path).Length
+        let size, isDir =
+            if attr.HasFlag FileAttributes.Directory then
+                Dir.EnumerateFileSystemEntries path |> Seq.sumBy getSize, true
+            else
+                FileInfo(path).Length, false
+        entries.[path] <- Entry(path, size, isDir)
+        size
     with ex ->
-        errors <- List.singleton path |> List.append errors 
-        //eprintfn "Error: %s" ex.Message
+        errors.[path] <- ex.Message
         0L
 
 let getSizeString (bytes: int64) =
@@ -33,28 +41,18 @@ let getSizeString (bytes: int64) =
         let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitsIdx), 0)
         (num, sizeUnits.[int (sizeUnitsIdx)])
 
-let printFormatted (path: string, size: int64) =
-    let name = Array.last (path.Split Path.DirectorySeparatorChar)
-    let (newSize, sizeUnit) = getSizeString size
-    printfn "%10.0f %-3s %s" newSize sizeUnit name
+let printFormatted (path: string) =
+    let name = entries.[path].path
+    let newSize, sizeUnit = getSizeString entries.[path].size
+    printfn "%10.0f %-1s %s" newSize sizeUnit name
 
 let sizyMain path =
-    let lsF = Dir.EnumerateFiles path
-    let lsD = Dir.EnumerateDirectories path
-    let sizeF = PSeq.map getSize lsF
-    let sizeD = PSeq.map getSize lsD
-    let sizeTot = PSeq.append sizeF sizeD |> PSeq.sum
-    let print ls sizes = PSeq.zip ls sizes |> Seq.iter printFormatted
-    print lsD sizeD
-    print lsF sizeF
-    printfn "%s" (String.replicate 14 "-")
-    printFormatted ("", sizeTot)
-
-let sizyMain2 path =
     let ls = Dir.EnumerateFileSystemEntries path
     let sizes = PSeq.map getSize ls
-    let tot = PSeq.sum sizes
-    printFormatted("", tot)
+    let totSize, sizeUnit = getSizeString (PSeq.sum sizes)
+    PSeq.filter (fun x -> entries.ContainsKey x && entries.[x].isDir) ls |> PSeq.sort |> Seq.iter printFormatted
+    PSeq.filter (fun x -> entries.ContainsKey x && not entries.[x].isDir) ls |> PSeq.sort |> Seq.iter printFormatted
+    printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize sizeUnit
 
 [<EntryPoint>]
 let main argv =
@@ -63,9 +61,9 @@ let main argv =
         let path =
             if config.Contains InputPath then config.GetResult InputPath else Dir.GetCurrentDirectory()
         let stopWatch = Diagnostics.Stopwatch.StartNew()
-        sizyMain2 path
+        sizyMain path
         eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
-        String.concat " - " errors |> eprintfn "Path errors: %s" 
+        Seq.iter (fun x -> eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
         0
     | ReturnVal ret ->
         ret
