@@ -13,14 +13,14 @@ let sizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
 type Entry(path: string, size: int64, isDir: bool) =
 
-    member this.path =
-        Array.last (path.Split Path.DirectorySeparatorChar) + if isDir then "/" else ""
+    member this.name =
+        Array.last (path.Split Path.DirectorySeparatorChar) + if isDir then string (Path.DirectorySeparatorChar) else ""
 
     member this.size = size
     member this.isDir = isDir
 
-let errors = ConcurrentDictionary<string, string>()
 let entries = ConcurrentDictionary<string, Entry>()
+let errors = ConcurrentDictionary<string, string>()
 
 let rec getSize path =
     try
@@ -46,7 +46,7 @@ let getSizeString (bytes: int64) =
         (num, sizeUnits.[int (sizeUnitsIdx)])
 
 let printFormatted (path: string) =
-    let name = entries.[path].path
+    let name = entries.[path].name
     let newSize, sizeUnit = getSizeString entries.[path].size
     printfn "%10.0f %-1s %s" newSize sizeUnit name
 
