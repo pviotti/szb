@@ -10,6 +10,7 @@ module ``Sizy tests`` =
 
     let getSizeStringTestData : Object [] [] =
         [|
+            [| -12345; 0.0; "B" |]
             [| 0; 0.0; "B" |]
             [| 1024; 1.0; "k" |]
             [| 1024+103; 1.0; "k" |]

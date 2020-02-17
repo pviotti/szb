@@ -35,7 +35,7 @@ let rec getSize (fsEntries: IDictionary<_, _>) (errors: IDictionary<_, _>) path 
         0L
 
 let getSizeString bytes =
-    if bytes = 0L then
+    if bytes <= 0L then
         0.0, SizeUnits.[0]
     else
         let bytesF = float (bytes)
