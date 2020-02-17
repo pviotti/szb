@@ -47,7 +47,9 @@ let printFormatted path name size =
     let newSize, sizeUnit = getSizeString size
     printfn "%10.0f %-1s %s" newSize sizeUnit name
 
-let sizyMain path fsEntries errors =
+let sizyMain path =
+    let fsEntries = ConcurrentDictionary<string, Entry>()
+    let errors = ConcurrentDictionary<string, string>()
     let ls = Dir.EnumerateFileSystemEntries path
     let sizes = PSeq.map (getSize fsEntries errors) ls
     let totSize, sizeUnit = getSizeString (PSeq.sum sizes)
@@ -59,6 +61,9 @@ let sizyMain path fsEntries errors =
     print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].isDir)
     print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].isDir)
     printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize sizeUnit
+    Seq.iter (fun x ->
+        eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
+    totSize
 
 [<EntryPoint>]
 let main argv =
@@ -67,12 +72,8 @@ let main argv =
         let path =
             if config.Contains InputPath then config.GetResult InputPath else Dir.GetCurrentDirectory()
 
-        let fsEntries = ConcurrentDictionary<string, Entry>()
-        let errors = ConcurrentDictionary<string, string>()
         let stopWatch = Diagnostics.Stopwatch.StartNew()
-        sizyMain path fsEntries errors
+        sizyMain path |> ignore
         eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
-        Seq.iter (fun x ->
-            eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
         0
     | ReturnVal ret -> ret
