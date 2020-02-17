@@ -36,12 +36,12 @@ let rec getSize (fsEntries: IDictionary<_, _>) (errors: IDictionary<_, _>) path 
 
 let getSizeString bytes =
     if bytes = 0L then
-        (0.0, SizeUnits.[0])
+        0.0, SizeUnits.[0]
     else
         let bytesF = float (bytes)
         let sizeUnitsIdx = Math.Floor(Math.Log(bytesF, 1024.0))
         let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitsIdx), 0)
-        (num, SizeUnits.[int (sizeUnitsIdx)])
+        num, SizeUnits.[int (sizeUnitsIdx)]
 
 let printFormatted path name size =
     let newSize, sizeUnit = getSizeString size
