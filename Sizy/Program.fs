@@ -43,7 +43,7 @@ let getSizeString bytes =
         let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitsIdx), 0)
         num, SizeUnits.[int (sizeUnitsIdx)]
 
-let printFormatted path name size =
+let printFormatted name size =
     let newSize, sizeUnit = getSizeString size
     printfn "%10.0f %-1s %s" newSize sizeUnit name
 
@@ -57,7 +57,7 @@ let sizyMain path =
     let print filter =
         PSeq.filter filter ls
         |> PSeq.sort
-        |> Seq.iter (fun p -> printFormatted path fsEntries.[p].name fsEntries.[p].size)
+        |> Seq.iter (fun p -> printFormatted fsEntries.[p].name fsEntries.[p].size)
     print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].isDir)
     print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].isDir)
     printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize sizeUnit
