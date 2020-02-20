@@ -3,32 +3,30 @@ module Sizy.Program
 open Sizy.Config
 
 open System
-open System.IO
+open System.IO.Abstractions
 open System.Collections.Generic
 open System.Collections.Concurrent
 open FSharp.Collections.ParallelSeq
 
-type Dir = Directory
-
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
-type Entry(path: string, size: int64, isDir: bool) =
+type Entry(path: string, size: int64, isDir: bool, sep: char) =
 
     member this.name =
-        Array.last (path.Split Path.DirectorySeparatorChar) + if isDir then string (Path.DirectorySeparatorChar) else ""
+        Array.last (path.Split sep) + if isDir then string sep else ""
 
     member this.size = size
     member this.isDir = isDir
 
-let rec getSize (fsEntries: IDictionary<_, _>) (errors: IDictionary<_, _>) path =
+let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<_, _>) (errors: IDictionary<_, _>) path =
     try
-        let attr = File.GetAttributes path
+        let attr = fs.File.GetAttributes path
 
         let size, isDir =
-            if attr.HasFlag FileAttributes.Directory
-            then Dir.EnumerateFileSystemEntries path |> Seq.sumBy (getSize fsEntries errors), true
-            else FileInfo(path).Length, false
-        fsEntries.[path] <- Entry(path, size, isDir)
+            if attr.HasFlag System.IO.FileAttributes.Directory
+            then fs.Directory.EnumerateFileSystemEntries path |> Seq.sumBy (getSize fs fsEntries errors), true
+            else fs.FileInfo.FromFileName(path).Length, false
+        fsEntries.[path] <- Entry(path, size, isDir, fs.Path.DirectorySeparatorChar)
         size
     with ex ->
         errors.[path] <- ex.Message
@@ -47,11 +45,11 @@ let printFormatted name size =
     let newSize, sizeUnit = getSizeString size
     printfn "%10.0f %-1s %s" newSize sizeUnit name
 
-let sizyMain path =
+let sizyMain (fs: IFileSystem, path: string) =
     let fsEntries = ConcurrentDictionary<string, Entry>()
     let errors = ConcurrentDictionary<string, string>()
-    let ls = Dir.EnumerateFileSystemEntries path
-    let sizes = PSeq.map (getSize fsEntries errors) ls
+    let ls = fs.Directory.EnumerateFileSystemEntries path
+    let sizes = PSeq.map (getSize fs fsEntries errors) ls
     let totSize, sizeUnit = getSizeString (PSeq.sum sizes)
 
     let print filter =
@@ -69,11 +67,13 @@ let sizyMain path =
 let main argv =
     match Config.getConfiguration argv with
     | Config config ->
+        let fs = new FileSystem()
+
         let path =
-            if config.Contains InputPath then config.GetResult InputPath else Dir.GetCurrentDirectory()
+            if config.Contains InputPath then config.GetResult InputPath else fs.Directory.GetCurrentDirectory()
 
         let stopWatch = Diagnostics.Stopwatch.StartNew()
-        sizyMain path |> ignore
+        sizyMain (fs, path) |> ignore
         eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
         0
     | ReturnVal ret -> ret
