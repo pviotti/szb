@@ -2,6 +2,8 @@ namespace Sizy.Test
 
 open System
 open System.IO
+open System.IO.Abstractions
+open System.IO.Abstractions.TestingHelpers
 open Xunit
 open FsUnit.Xunit
 
@@ -21,7 +23,16 @@ module ``Sizy Test`` =
     let Sep = string Path.DirectorySeparatorChar
     let MaxNumBytes = 100
 
-    let createTestFileSystem nBytes =
+    let TestFileContent = "Hello world"
+
+    let MockFs =
+        [ """/test/myfile.txt""", TestFileContent ]
+        |> Seq.map (fun (k, v) -> k, MockFileData v)
+        |> Map.ofSeq
+        |> MockFileSystem
+
+
+    let createTestFolder nBytes =
         let tmpPath = Path.GetTempPath()
         let rootFolder = Directory.CreateDirectory(tmpPath + Sep + (rndStr 5)).FullName
         let mutable remBytes = nBytes
@@ -50,9 +61,15 @@ module ``Sizy Test`` =
     [<Fact>]
     let checkTotalSize() =
         let numWrittenBytes = r.Next MaxNumBytes
-        let rootFolder = createTestFileSystem numWrittenBytes
-        Program.sizyMain rootFolder |> should equal (float numWrittenBytes)
+        let rootFolder = createTestFolder numWrittenBytes
+        let fs = new FileSystem()
+        Program.sizyMain (fs, rootFolder) |> should equal (float numWrittenBytes)
         Directory.Delete(rootFolder, true)
+
+    [<Fact>]
+    let checkTotalSizeMock() =
+        let rootFolder = """/test"""
+        Program.sizyMain (MockFs, rootFolder) |> should equal (float TestFileContent.Length)
 
     [<Theory>]
     [<MemberData("getSizeStringTestData")>]
