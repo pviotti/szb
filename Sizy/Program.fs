@@ -40,7 +40,7 @@ let sizyMain (fs: IFileSystem, path: string) =
     let totSize = PSeq.sum sizes
     ls, fsEntries, totSize, errors
 
-let getSizeUnit bytes =
+let getSizeUnit2 bytes =
     if bytes <= 0L then
         0.0, SizeUnits.[0]
     else
@@ -48,6 +48,24 @@ let getSizeUnit bytes =
         let sizeUnitsIdx = Math.Floor(Math.Log(bytesF, 1024.0))
         let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitsIdx), 0)
         num, SizeUnits.[int (sizeUnitsIdx)]
+
+let getSizeUnit bytes =
+    if bytes <= 0L then
+        0.0, SizeUnits.[0]
+    elif bytes >= 0x1000000000000000L then
+        Math.Round(float(bytes >>> 50) / 1024.0, 0), SizeUnits.[6]
+    elif bytes >= 0x4000000000000L then
+        Math.Round(float(bytes >>> 40) / 1024.0), SizeUnits.[5]
+    elif bytes >= 0x10000000000L then
+        Math.Round(float(bytes >>> 30) / 1024.0), SizeUnits.[4]
+    elif bytes >= 0x40000000L then
+        Math.Round(float(bytes >>> 20) / 1024.0), SizeUnits.[3]
+    elif bytes >= 0x100000L then
+        Math.Round(float(bytes >>> 10) / 1024.0), SizeUnits.[2]
+    elif bytes >= 0x400L then
+        Math.Round(float(bytes) / 1024.0), SizeUnits.[1]
+    else
+        float(bytes), SizeUnits.[0]
 
 let getSizeString name size =
     let newSize, sizeUnit = getSizeUnit size
