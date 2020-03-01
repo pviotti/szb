@@ -32,7 +32,15 @@ let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<_, _>) (errors: IDicti
         errors.[path] <- ex.Message
         0L
 
-let getSizeString bytes =
+let sizyMain (fs: IFileSystem, path: string) =
+    let fsEntries = ConcurrentDictionary<string, Entry>()
+    let errors = ConcurrentDictionary<string, string>()
+    let ls = fs.Directory.EnumerateFileSystemEntries path
+    let sizes = PSeq.map (getSize fs fsEntries errors) ls
+    let totSize = PSeq.sum sizes
+    ls, fsEntries, totSize, errors
+
+let getSizeUnit bytes =
     if bytes <= 0L then
         0.0, SizeUnits.[0]
     else
@@ -41,27 +49,9 @@ let getSizeString bytes =
         let num = Math.Round(bytesF / Math.Pow(1024.0, sizeUnitsIdx), 0)
         num, SizeUnits.[int (sizeUnitsIdx)]
 
-let printFormatted name size =
-    let newSize, sizeUnit = getSizeString size
-    printfn "%10.0f %-1s %s" newSize sizeUnit name
-
-let sizyMain (fs: IFileSystem, path: string) =
-    let fsEntries = ConcurrentDictionary<string, Entry>()
-    let errors = ConcurrentDictionary<string, string>()
-    let ls = fs.Directory.EnumerateFileSystemEntries path
-    let sizes = PSeq.map (getSize fs fsEntries errors) ls
-    let totSize, sizeUnit = getSizeString (PSeq.sum sizes)
-
-    let print filter =
-        PSeq.filter filter ls
-        |> PSeq.sort
-        |> Seq.iter (fun p -> printFormatted fsEntries.[p].name fsEntries.[p].size)
-    print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].isDir)
-    print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].isDir)
-    printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize sizeUnit
-    Seq.iter (fun x ->
-        eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
-    totSize
+let getSizeString name size =
+    let newSize, sizeUnit = getSizeUnit size
+    sprintf "%10.0f %-1s %s\n" newSize sizeUnit name
 
 [<EntryPoint>]
 let main argv =
@@ -73,7 +63,21 @@ let main argv =
             if config.Contains InputPath then config.GetResult InputPath else fs.Directory.GetCurrentDirectory()
 
         let stopWatch = Diagnostics.Stopwatch.StartNew()
-        sizyMain (fs, path) |> ignore
+        let (ls, fsEntries, totSize, errors) = sizyMain (fs, path)
+
+        let print f =
+            PSeq.filter f ls
+            |> PSeq.sort
+            |> Seq.iter (fun p -> printf "%s" (getSizeString fsEntries.[p].name fsEntries.[p].size))
+        print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].isDir)
+        print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].isDir)
+
+        let totSize, totSizeUnit = getSizeUnit totSize
+        printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize totSizeUnit
+
+        Seq.iter (fun x ->
+            eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
+
         eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
         0
     | ReturnVal ret -> ret
