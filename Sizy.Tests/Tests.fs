@@ -31,6 +31,7 @@ module ``Sizy Test`` =
         |> Map.ofSeq
         |> MockFileSystem
 
+    let MockFsRootFolder = """/test"""
 
     let createTestFolder nBytes =
         let tmpPath = Path.GetTempPath()
@@ -44,7 +45,7 @@ module ``Sizy Test`` =
             remBytes <- remBytes - bytes
         rootFolder
 
-    let getSizeStringTestData: Object [] [] =
+    let getSizeUnitTestData: Object [] [] =
         [| [| -12345; 0.0; "B" |]
            [| 0; 0.0; "B" |]
            [| 1024; 1.0; "k" |]
@@ -63,18 +64,19 @@ module ``Sizy Test`` =
         let numWrittenBytes = r.Next MaxNumBytes
         let rootFolder = createTestFolder numWrittenBytes
         let fs = new FileSystem()
-        Program.sizyMain (fs, rootFolder) |> should equal (float numWrittenBytes)
+        let _, _, totSize, _ = Program.sizyMain (fs, rootFolder)
+        totSize |> should equal (int64 numWrittenBytes)
         Directory.Delete(rootFolder, true)
 
     [<Fact>]
     let checkTotalSizeMock() =
-        let rootFolder = """/test"""
-        Program.sizyMain (MockFs, rootFolder) |> should equal (float TestFileContent.Length)
+        let _, _, totSize, _ = Program.sizyMain (MockFs, MockFsRootFolder)
+        totSize |> should equal (int64 TestFileContent.Length)
 
     [<Theory>]
-    [<MemberData("getSizeStringTestData")>]
-    let getSizeString (input: int64, outSize: float, outUnit: string) =
-        Program.getSizeString input |> should equal (outSize, outUnit)
+    [<MemberData("getSizeUnitTestData")>]
+    let getSizeUnit (input: int64, outSize: float, outUnit: string) =
+        Program.getSizeUnit input |> should equal (outSize, outUnit)
 
 
     [<EntryPoint>]
