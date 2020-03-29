@@ -1,9 +1,9 @@
-//namespace Sizy.Benchmarks
+namespace Sizy.Benchmarks
 
 open BenchmarkDotNet.Running
 open BenchmarkDotNet.Attributes
 
-open Sizy
+open Sizy.Program
 
 type Benchmarks () =
     [<ParamsSource("NBytesValues")>]
@@ -12,14 +12,11 @@ type Benchmarks () =
     member val public NBytesValues = seq {0L .. 10010L .. 100000L}
 
     [<Benchmark>]
-    member this.GetSizeUnit () = Program.getSizeUnit(this.NBytes) |> ignore
+    member this.GetSizeUnit () = getSizeUnit(this.NBytes) |> ignore
 
-    [<Benchmark>]
-    member this.GetSizeUnit2 () = Program.getSizeUnit2(this.NBytes) |> ignore
-
-    
-[<EntryPoint>]
-let main argv =
-    BenchmarkRunner.Run<Benchmarks>() |> ignore
-    0
+module Program =
+    [<EntryPoint>]
+    let main argv =
+        BenchmarkRunner.Run<Benchmarks>() |> ignore
+        0
     
