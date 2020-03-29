@@ -77,7 +77,3 @@ module ``Sizy Test`` =
     [<MemberData("getSizeUnitTestData")>]
     let getSizeUnit (input: int64, outSize: float, outUnit: string) =
         Program.getSizeUnit input |> should equal (outSize, outUnit)
-
-
-    [<EntryPoint>]
-    let main _ = 0
