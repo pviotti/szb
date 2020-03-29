@@ -2,12 +2,11 @@ namespace Sizy.Test
 
 open System
 open System.IO
-open System.IO.Abstractions
 open System.IO.Abstractions.TestingHelpers
 open Xunit
 open FsUnit.Xunit
 
-open Sizy
+open Sizy.Main
 
 module ``Sizy Test`` =
 
@@ -63,17 +62,16 @@ module ``Sizy Test`` =
     let checkTotalSize() =
         let numWrittenBytes = r.Next MaxNumBytes
         let rootFolder = createTestFolder numWrittenBytes
-        let fs = new FileSystem()
-        let _, _, totSize, _ = Program.sizyMain (fs, rootFolder)
+        let _, _, totSize, _ = sizyMain (rootFolder)
         totSize |> should equal (int64 numWrittenBytes)
         Directory.Delete(rootFolder, true)
 
     [<Fact>]
     let checkTotalSizeMock() =
-        let _, _, totSize, _ = Program.sizyMain (MockFs, MockFsRootFolder)
+        let _, _, totSize, _ = _sizyMain (MockFs, MockFsRootFolder)
         totSize |> should equal (int64 TestFileContent.Length)
 
     [<Theory>]
     [<MemberData("getSizeUnitTestData")>]
     let getSizeUnit (input: int64, outSize: float, outUnit: string) =
-        Program.getSizeUnit input |> should equal (outSize, outUnit)
+        getSizeUnit input |> should equal (outSize, outUnit)
