@@ -64,7 +64,7 @@ let getSizeUnit bytes =
 
 let getSizeString name size =
     let newSize, sizeUnit = getSizeUnit size
-    sprintf "%10.0f %-1s %s\n" newSize sizeUnit name
+    sprintf "%10.0f %-1s %s" newSize sizeUnit name
 
 [<EntryPoint>]
 let main argv =
@@ -79,7 +79,7 @@ let main argv =
         let print f =
             PSeq.filter f ls
             |> PSeq.sort
-            |> Seq.iter (fun p -> printf "%s" (getSizeString fsEntries.[p].Name fsEntries.[p].Size))
+            |> Seq.iter (fun p -> printf "%s\n" (getSizeString fsEntries.[p].Name fsEntries.[p].Size))
         print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir)
         print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir)
 
