@@ -9,9 +9,11 @@
 
   <ItemGroup>
     <Compile Include="Tests.fs" />
+    <Compile Include="Benchmarks.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.12.0" />
     <PackageReference Include="FsUnit.xUnit" Version="3.8.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
     <PackageReference Include="System.IO.Abstractions" Version="9.0.4" />

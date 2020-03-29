@@ -16,7 +16,7 @@ type Args =
             match s with
             | Version _ -> sprintf "print %s version." PROGRAM_NAME
             | Percentage _ -> "show percentage values"
-            | InputPath _ -> "the folder you want to analise"
+            | InputPath _ -> "the folder you want to analyse"
 
 type ConfigOrInt =
     | Config of Argu.ParseResults<Args>

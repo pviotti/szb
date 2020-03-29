@@ -6,6 +6,7 @@ project.lock.json
 
 # Visual Studio Code
 .vscode
+.ionide
 
 # User-specific files
 *.suo
@@ -27,6 +28,9 @@ bld/
 msbuild.log
 msbuild.err
 msbuild.wrn
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts
 
 # Visual Studio 2015
 .vs/
