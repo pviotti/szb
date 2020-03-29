@@ -1,4 +1,4 @@
-module Sizy.Program
+module Sizy.Main
 
 open Sizy.Config
 
@@ -33,13 +33,16 @@ let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<_, _>) (errors: IDicti
         errors.[path] <- ex.Message
         0L
 
-let sizyMain (fs: IFileSystem, path: string) =
+let _sizyMain (fs: IFileSystem, path: string) =
     let fsEntries = ConcurrentDictionary<string, Entry>()
     let errors = ConcurrentDictionary<string, string>()
     let ls = fs.Directory.EnumerateFileSystemEntries path
     let sizes = PSeq.map (getSize fs fsEntries errors) ls
     let totSize = PSeq.sum sizes
     ls, fsEntries, totSize, errors
+
+let sizyMain(path: string) =
+    _sizyMain(FileSystem(), path)
 
 let getSizeUnit bytes =
     if bytes <= 0L then
@@ -67,13 +70,11 @@ let getSizeString name size =
 let main argv =
     match getConfiguration argv with
     | Config config ->
-        let fs = FileSystem()
-
         let path =
-            if config.Contains InputPath then config.GetResult InputPath else fs.Directory.GetCurrentDirectory()
+            if config.Contains InputPath then config.GetResult InputPath else Directory.GetCurrentDirectory()
 
         let stopWatch = Diagnostics.Stopwatch.StartNew()
-        let (ls, fsEntries, totSize, errors) = sizyMain (fs, path)
+        let (ls, fsEntries, totSize, errors) = sizyMain (path)
 
         let print f =
             PSeq.filter f ls
