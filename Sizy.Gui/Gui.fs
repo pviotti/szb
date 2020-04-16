@@ -5,6 +5,7 @@ open NStack
 
 open System.IO
 open Sizy.Main
+open Sizy.Config
 open System.Collections.Concurrent
 
 let ustr (x: string) = ustring.Make(x)
@@ -34,18 +35,23 @@ let getTotalSizeStr totSize =
 
 [<EntryPoint>]
 let main argv =
-    Application.Init()
-    let ls, entries, totSize, _ = sizyMain (Directory.GetCurrentDirectory())
-    let top = Application.Top
-    let data = getEntries ls entries
-    let lstOne = ListView(data, X = Pos.At(0), Y = Pos.At(0), Width = Dim.Percent(50.0f), Height = Dim.Fill(1))
-    //let lstTwo =ListView (getEntries(), X=Pos.At(0), Y=Pos.At(0), Width=Dim.Percent(50.0f), Height=Dim.Fill(1))
-    let lblTotSize =
-        Label
-            (ustr (getTotalSizeStr totSize), X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Fill(),
-             Height = Dim.Sized(1))
-    win.Add(lstOne)
-    win.Add(lblTotSize)
-    top.Add(win)
-    Application.Run()
-    0
+    match getConfiguration argv with
+    | Config config ->
+        let path =
+            if config.Contains InputPath then config.GetResult InputPath else Directory.GetCurrentDirectory()
+        Application.Init()
+        let ls, entries, totSize, _ = sizyMain (path)
+        let top = Application.Top
+        let data = getEntries ls entries
+        let lstOne = ListView(data, X = Pos.At(0), Y = Pos.At(0), Width = Dim.Percent(50.0f), Height = Dim.Fill(1))
+        //let lstTwo =ListView (getEntries(), X=Pos.At(0), Y=Pos.At(0), Width=Dim.Percent(50.0f), Height=Dim.Fill(1))
+        let lblTotSize =
+            Label
+                (ustr (getTotalSizeStr totSize), X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Fill(),
+                 Height = Dim.Sized(1))
+        win.Add(lstOne)
+        win.Add(lblTotSize)
+        top.Add(win)
+        Application.Run()
+        0
+    | ReturnVal ret -> ret
