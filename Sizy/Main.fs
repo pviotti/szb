@@ -12,26 +12,28 @@ open FSharp.Collections.ParallelSeq
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
 type Entry(path: string, size: int64, isDir: bool, sep: char) =
-
-    member this.Name =
+    member __.Name =
         Array.last (path.Split sep) + if isDir then string sep else ""
 
-    member this.Size = size
-    member this.IsDir = isDir
+    member __.Size = size
+    member __.IsDir = isDir
 
-let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<_, _>) (errors: IDictionary<_, _>) path =
-    try
-        let attr = fs.File.GetAttributes path
+let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<string, Entry>) (errors: IDictionary<_, _>) path =
+    if fsEntries.ContainsKey path then
+        fsEntries.[path].Size
+    else
+        try
+            let attr = fs.File.GetAttributes path
 
-        let size, isDir =
-            if attr.HasFlag FileAttributes.Directory
-            then fs.Directory.EnumerateFileSystemEntries path |> Seq.sumBy (getSize fs fsEntries errors), true
-            else fs.FileInfo.FromFileName(path).Length, false
-        fsEntries.[path] <- Entry(path, size, isDir, fs.Path.DirectorySeparatorChar)
-        size
-    with ex ->
-        errors.[path] <- ex.Message
-        0L
+            let size, isDir =
+                if attr.HasFlag FileAttributes.Directory
+                then fs.Directory.EnumerateFileSystemEntries path |> Seq.sumBy (getSize fs fsEntries errors), true
+                else fs.FileInfo.FromFileName(path).Length, false
+            fsEntries.[path] <- Entry(path, size, isDir, fs.Path.DirectorySeparatorChar)
+            size
+        with ex ->
+            errors.[path] <- ex.Message
+            0L
 
 let _sizyMain (fs: IFileSystem, path: string) =
     let fsEntries = ConcurrentDictionary<string, Entry>()
