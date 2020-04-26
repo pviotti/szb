@@ -40,7 +40,7 @@ let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
     let createStrFun = fun p -> sprintf "%s" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
     let foldersSeq = filterSortEntries ls fltrFoldersFun |> PSeq.map createStrFun
     let filesSeq = filterSortEntries ls fltrFilesFun |> PSeq.map createStrFun
-    PSeq.append foldersSeq filesSeq  |> PSeq.toArray
+    PSeq.append foldersSeq filesSeq |> PSeq.toArray
 
 let updateData path entries =
     ls <- Directory.EnumerateFileSystemEntries path
@@ -53,8 +53,10 @@ let updateData path entries =
 #region "UI components"
 
 module Gui =
+
     let Window =
-        { new Window(ustr "Sizy", X = Pos.op_Implicit (0), Y = Pos.op_Implicit (0), Width = Dim.Fill(), Height = Dim.Fill()) with
+        { new Window(ustr PROGRAM_NAME, X = Pos.op_Implicit (0), Y = Pos.op_Implicit (0), Width = Dim.Fill(),
+                     Height = Dim.Fill()) with
             member __.ProcessKey(k: KeyEvent) =
                 if k.KeyValue = int 'q' then
                     Application.Top.Running <- false
@@ -67,14 +69,18 @@ module Gui =
     let LstView =
         { new ListView([||], X = Pos.At(0), Y = Pos.At(0), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
             member u.ProcessKey(k: KeyEvent) =
+
+                let updateViews() =
+                    Application.MainLoop.Invoke(fun () ->
+                        u.SetSource lstData
+                        LblTotSize.Text <- ustr totSizeStr)
+
                 let entryName = lstData.[u.SelectedItem].Substring(13)
                 if (k.Key = Key.Enter || k.Key = Key.CursorRight) && entryName.EndsWith "/" then
                     let newDir = List.head (dirStack) + "/" + entryName.TrimEnd('/')
                     dirStack <- newDir :: dirStack
                     updateData newDir fsEntries
-                    Application.MainLoop.Invoke(fun () ->
-                        u.SetSource lstData
-                        LblTotSize.Text <- ustr totSizeStr)
+                    updateViews()
                     true
                 elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft) && List.length dirStack > 1 then
                     dirStack <-
@@ -82,9 +88,7 @@ module Gui =
                         | _ :: tl -> tl
                         | [] -> []
                     updateData (List.head dirStack) fsEntries
-                    Application.MainLoop.Invoke(fun () ->
-                        u.SetSource lstData
-                        LblTotSize.Text <- ustr totSizeStr)
+                    updateViews()
                     true
                 else
                     base.ProcessKey k }
@@ -102,7 +106,9 @@ let main argv =
             let stopWatch = Diagnostics.Stopwatch.StartNew()
 
             updateData path fsEntries
-            let printFun = fun p -> printf "%s\n" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
+            let printFun =
+                fun path ->
+                    printf "%s\n" (getSizeStr fsEntries.[path].Name fsEntries.[path].Size)
             filterSortEntries ls fltrFoldersFun |> Seq.iter printFun
             filterSortEntries ls fltrFilesFun |> Seq.iter printFun
             printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
