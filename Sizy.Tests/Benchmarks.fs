@@ -3,7 +3,7 @@ namespace Sizy.Benchmarks
 open BenchmarkDotNet.Running
 open BenchmarkDotNet.Attributes
 
-open Sizy.Program
+open Sizy.Filesystem
 
 type Benchmarks () =
     [<ParamsSource("NBytesValues")>]

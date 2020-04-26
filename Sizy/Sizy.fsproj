@@ -8,13 +8,15 @@
 
   <ItemGroup>
     <Compile Include="Config.fs" />
-    <Compile Include="Program.fs" />
+    <Compile Include="Filesystem.fs" />
+    <Compile Include="Gui.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.0.0" />
     <PackageReference Include="Fsharp.Collections.ParallelSeq" Version="1.1.2" />
     <PackageReference Include="System.IO.Abstractions" Version="9.0.4" />
+    <PackageReference Include="Terminal.Gui" Version="0.81.0" />
   </ItemGroup>
 
 </Project>

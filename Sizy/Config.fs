@@ -9,14 +9,14 @@ let PROGRAM_NAME = "sizy"
 
 type Args =
     | [<NoAppSettings>] Version
-    | [<AltCommandLine("-p")>] Percentage
-    | [<MainCommand>] InputPath of path: string
+    | [<MainCommand>] Input of path: string
+    | [<AltCommandLine("-p"); NoAppSettings>] Print_Only
     interface IArgParserTemplate with
         member s.Usage =
             match s with
             | Version _ -> sprintf "print %s version." PROGRAM_NAME
-            | Percentage _ -> "show percentage values"
-            | InputPath _ -> "the folder you want to analyse"
+            | Input _ -> "the folder you want to analyse (default: current folder)."
+            | Print_Only _ -> "output the results to screen and exit."
 
 type ConfigOrInt =
     | Config of Argu.ParseResults<Args>
@@ -24,16 +24,8 @@ type ConfigOrInt =
 
 let printVersion() = printfn "%s version %s" PROGRAM_NAME VERSION
 
-
 let getConfiguration argv =
-    let errorHandler =
-        ProcessExiter
-            (colorizer =
-                function
-                | ErrorCode.HelpText -> None
-                | _ -> Some ConsoleColor.Red)
-
-    let parser = ArgumentParser.Create<Args>(programName = PROGRAM_NAME, errorHandler = errorHandler)
+    let parser = ArgumentParser.Create<Args>(programName = PROGRAM_NAME, errorHandler = ProcessExiter())
     let config = parser.Parse(argv, ignoreMissing = true)
 
     if config.Contains Version then
