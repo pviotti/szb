@@ -3,6 +3,7 @@ module Sizy.Gui
 open Terminal.Gui
 open NStack
 
+open System
 open System.IO
 open Sizy.Filesystem
 open Sizy.Config
@@ -88,17 +89,37 @@ let main argv =
     | Config config ->
         let path =
             if config.Contains InputPath then config.GetResult InputPath else Directory.GetCurrentDirectory()
-        Application.Init()
 
-        dirStack <- [ path ]
-        updateData path fsEntries
-        Application.MainLoop.Invoke(fun () ->
-            lstView.SetSource lstData
-            lblTotSize.Text <- ustr totSizeStr)
+        if config.Contains Print_Only then
+            let stopWatch = Diagnostics.Stopwatch.StartNew()
+            let (ls, fsEntries, totSize, errors) = sizyMain (path)
 
-        window.Add(lstView)
-        window.Add(lblTotSize)
-        Application.Top.Add(window)
-        Application.Run()
+            let print f =
+                PSeq.filter f ls
+                |> PSeq.sort
+                |> Seq.iter (fun p -> printf "%s\n" (getSizeString fsEntries.[p].Name fsEntries.[p].Size))
+            print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir)
+            print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir)
+
+            let totSize, totSizeUnit = getSizeUnit totSize
+            printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize totSizeUnit
+
+            Seq.iter (fun x ->
+                eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
+
+            eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
+        else
+            Application.Init()
+
+            dirStack <- [ path ]
+            updateData path fsEntries
+            Application.MainLoop.Invoke(fun () ->
+                lstView.SetSource lstData
+                lblTotSize.Text <- ustr totSizeStr)
+
+            window.Add(lstView)
+            window.Add(lblTotSize)
+            Application.Top.Add(window)
+            Application.Run()
         0
     | ReturnVal ret -> ret

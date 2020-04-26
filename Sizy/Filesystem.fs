@@ -1,7 +1,5 @@
 module Sizy.Filesystem
 
-open Sizy.Config
-
 open System
 open System.IO
 open System.IO.Abstractions
@@ -67,30 +65,3 @@ let getSizeUnit bytes =
 let getSizeString name size =
     let newSize, sizeUnit = getSizeUnit size
     sprintf "%10.0f %-1s %s" newSize sizeUnit name
-
-//[<EntryPoint>]
-let main argv =
-    match getConfiguration argv with
-    | Config config ->
-        let path =
-            if config.Contains InputPath then config.GetResult InputPath else Directory.GetCurrentDirectory()
-
-        let stopWatch = Diagnostics.Stopwatch.StartNew()
-        let (ls, fsEntries, totSize, errors) = sizyMain (path)
-
-        let print f =
-            PSeq.filter f ls
-            |> PSeq.sort
-            |> Seq.iter (fun p -> printf "%s\n" (getSizeString fsEntries.[p].Name fsEntries.[p].Size))
-        print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir)
-        print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir)
-
-        let totSize, totSizeUnit = getSizeUnit totSize
-        printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize totSizeUnit
-
-        Seq.iter (fun x ->
-            eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
-
-        eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
-        0
-    | ReturnVal ret -> ret
