@@ -4,7 +4,6 @@ open System
 open System.IO
 open System.IO.Abstractions
 open System.Collections.Generic
-open System.Collections.Concurrent
 open FSharp.Collections.ParallelSeq
 
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
@@ -12,7 +11,6 @@ let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 type Entry(path: string, size: int64, isDir: bool, sep: char) =
     member __.Name =
         Array.last (path.Split sep) + if isDir then string sep else ""
-
     member __.Size = size
     member __.IsDir = isDir
 
@@ -22,7 +20,6 @@ let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<string, Entry>) (error
     else
         try
             let attr = fs.File.GetAttributes path
-
             let size, isDir =
                 if attr.HasFlag FileAttributes.Directory
                 then fs.Directory.EnumerateFileSystemEntries path |> Seq.sumBy (getSize fs fsEntries errors), true
@@ -32,17 +29,6 @@ let rec getSize (fs: IFileSystem) (fsEntries: IDictionary<string, Entry>) (error
         with ex ->
             errors.[path] <- ex.Message
             0L
-
-let _sizyMain (fs: IFileSystem, path: string) =
-    let fsEntries = ConcurrentDictionary<string, Entry>()
-    let errors = ConcurrentDictionary<string, string>()
-    let ls = fs.Directory.EnumerateFileSystemEntries path
-    let sizes = PSeq.map (getSize fs fsEntries errors) ls
-    let totSize = PSeq.sum sizes
-    ls, fsEntries, totSize, errors
-
-let sizyMain(path: string) =
-    _sizyMain(FileSystem(), path)
 
 let getSizeUnit bytes =
     if bytes <= 0L then
@@ -61,7 +47,3 @@ let getSizeUnit bytes =
         Math.Round(float(bytes) / 1024.0), SizeUnits.[1]
     else
         float(bytes), SizeUnits.[0]
-
-let getSizeString name size =
-    let newSize, sizeUnit = getSizeUnit size
-    sprintf "%10.0f %-1s %s" newSize sizeUnit name

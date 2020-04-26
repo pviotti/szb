@@ -1,10 +1,14 @@
 namespace Sizy.Test
 
 open System
+open System.Collections.Concurrent
 open System.IO
+open System.IO.Abstractions
 open System.IO.Abstractions.TestingHelpers
 open Xunit
 open FsUnit.Xunit
+
+open FSharp.Collections.ParallelSeq
 
 open Sizy.Filesystem
 
@@ -24,7 +28,7 @@ module ``Sizy Test`` =
 
     let TestFileContent = "Hello world"
 
-    let MockFs =
+    let MockFs() =
         [ """/test/myfile.txt""", TestFileContent ]
         |> Seq.map (fun (k, v) -> k, MockFileData v)
         |> Map.ofSeq
@@ -58,17 +62,24 @@ module ``Sizy Test`` =
               1.0
               "G" |] |]
 
+    let checkSizeHelper (fs: IFileSystem) inputFolder = 
+        let fsEntries = ConcurrentDictionary<string, Entry>()
+        let errors = ConcurrentDictionary<string, string>()
+        let ls = fs.Directory.EnumerateFileSystemEntries inputFolder
+        let sizes = PSeq.map (getSize fs fsEntries errors) ls
+        PSeq.sum sizes
+
     [<Fact>]
     let checkTotalSize() =
         let numWrittenBytes = r.Next MaxNumBytes
         let rootFolder = createTestFolder numWrittenBytes
-        let _, _, totSize, _ = sizyMain (rootFolder)
+        let totSize = checkSizeHelper (FileSystem()) rootFolder
         totSize |> should equal (int64 numWrittenBytes)
         Directory.Delete(rootFolder, true)
 
     [<Fact>]
     let checkTotalSizeMock() =
-        let _, _, totSize, _ = _sizyMain (MockFs, MockFsRootFolder)
+        let totSize = checkSizeHelper (MockFs()) MockFsRootFolder
         totSize |> should equal (int64 TestFileContent.Length)
 
     [<Theory>]
