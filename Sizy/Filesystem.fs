@@ -4,7 +4,6 @@ open System
 open System.IO
 open System.IO.Abstractions
 open System.Collections.Generic
-open FSharp.Collections.ParallelSeq
 
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
