@@ -15,28 +15,35 @@ let ustr (x: string) = ustring.Make(x)
 
 #region "Data and related functions"
 
+// XXX Mutable shared state
 let mutable dirStack: string list = []
 let mutable lstData: string [] = [||]
 let mutable totSizeStr = ""
+let mutable ls: string seq = Seq.empty<string>
 let fsEntries = ConcurrentDictionary<string, Entry>()
 let errors = ConcurrentDictionary<string, string>()
 
-let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
-    let getStrSeq f =
-        Seq.filter f ls
-        |> Seq.sort
-        |> Seq.map (fun p -> sprintf "%s" (getSizeString fsEntries.[p].Name fsEntries.[p].Size))
-
-    let fltrFolders = fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir
-    let fltrFiles = fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir
-    Seq.append (getStrSeq fltrFolders) (getStrSeq fltrFiles) |> Seq.toArray
+let getSizeStr name size =
+    let newSize, sizeUnit = getSizeUnit size
+    sprintf "%10.0f %-1s %s" newSize sizeUnit name
 
 let getTotalSizeStr totSize =
     let totSize, totSizeUnit = getSizeUnit totSize
-    sprintf "Tot. %10.0f%s" totSize totSizeUnit
+    sprintf "Tot. %5.0f %s" totSize totSizeUnit
+
+let filterSortEntries ls filterFun = PSeq.filter filterFun ls |> PSeq.sort
+
+let fltrFoldersFun = fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir
+let fltrFilesFun = fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir
+
+let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
+    let createStrFun = fun p -> sprintf "%s" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
+    let foldersSeq = filterSortEntries ls fltrFoldersFun |> PSeq.map createStrFun
+    let filesSeq = filterSortEntries ls fltrFilesFun |> PSeq.map createStrFun
+    PSeq.append foldersSeq filesSeq  |> PSeq.toArray
 
 let updateData path entries =
-    let ls = Directory.EnumerateFileSystemEntries path
+    ls <- Directory.EnumerateFileSystemEntries path
     let sizes = PSeq.map (getSize (FileSystem()) entries errors) ls
     totSizeStr <- getTotalSizeStr (PSeq.sum sizes)
     lstData <- getEntries ls entries
@@ -88,25 +95,19 @@ let main argv =
     match getConfiguration argv with
     | Config config ->
         let path =
-            if config.Contains InputPath then config.GetResult InputPath else Directory.GetCurrentDirectory()
+            if config.Contains Input then config.GetResult Input else Directory.GetCurrentDirectory()
 
         if config.Contains Print_Only then
             let stopWatch = Diagnostics.Stopwatch.StartNew()
-            let (ls, fsEntries, totSize, errors) = sizyMain (path)
 
-            let print f =
-                PSeq.filter f ls
-                |> PSeq.sort
-                |> Seq.iter (fun p -> printf "%s\n" (getSizeString fsEntries.[p].Name fsEntries.[p].Size))
-            print (fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir)
-            print (fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir)
-
-            let totSize, totSizeUnit = getSizeUnit totSize
-            printfn "%s\n%10.0f %-1s" (String.replicate 12 "-") totSize totSizeUnit
+            updateData path fsEntries
+            let printFun = fun p -> printf "%s\n" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
+            filterSortEntries ls fltrFoldersFun |> Seq.iter printFun
+            filterSortEntries ls fltrFilesFun |> Seq.iter printFun
+            printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
 
             Seq.iter (fun x ->
                 eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
-
             eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
         else
             Application.Init()
