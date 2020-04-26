@@ -4,7 +4,7 @@ open Terminal.Gui
 open NStack
 
 open System.IO
-open Sizy.Main
+open Sizy.Filesystem
 open Sizy.Config
 open System.IO.Abstractions
 open System.Collections.Concurrent

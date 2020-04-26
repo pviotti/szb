@@ -7,8 +7,6 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizy", "Sizy\Sizy.fsproj", 
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizy.Tests", "Sizy.Tests\Sizy.Tests.fsproj", "{D30034BD-BD41-4D35-A335-51BB54127CEB}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizy.Gui", "Sizy.Gui\Sizy.Gui.fsproj", "{CD12B30C-A154-4285-AD61-BEF64A6FC65B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,17 +44,5 @@ Global
 		{D30034BD-BD41-4D35-A335-51BB54127CEB}.Release|x64.Build.0 = Release|Any CPU
 		{D30034BD-BD41-4D35-A335-51BB54127CEB}.Release|x86.ActiveCfg = Release|Any CPU
 		{D30034BD-BD41-4D35-A335-51BB54127CEB}.Release|x86.Build.0 = Release|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Debug|x64.Build.0 = Debug|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Debug|x86.Build.0 = Debug|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Release|x64.ActiveCfg = Release|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Release|x64.Build.0 = Release|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Release|x86.ActiveCfg = Release|Any CPU
-		{CD12B30C-A154-4285-AD61-BEF64A6FC65B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

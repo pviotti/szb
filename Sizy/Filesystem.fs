@@ -1,4 +1,4 @@
-module Sizy.Main
+module Sizy.Filesystem
 
 open Sizy.Config
 
@@ -68,7 +68,7 @@ let getSizeString name size =
     let newSize, sizeUnit = getSizeUnit size
     sprintf "%10.0f %-1s %s" newSize sizeUnit name
 
-[<EntryPoint>]
+//[<EntryPoint>]
 let main argv =
     match getConfiguration argv with
     | Config config ->

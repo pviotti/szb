@@ -6,7 +6,7 @@ open System.IO.Abstractions.TestingHelpers
 open Xunit
 open FsUnit.Xunit
 
-open Sizy.Main
+open Sizy.Filesystem
 
 module ``Sizy Test`` =
 
