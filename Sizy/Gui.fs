@@ -76,8 +76,8 @@ module Gui =
                         LblTotSize.Text <- ustr totSizeStr)
 
                 let entryName = lstData.[u.SelectedItem].Substring(13)
-                if (k.Key = Key.Enter || k.Key = Key.CursorRight) && entryName.EndsWith "/" then
-                    let newDir = List.head (dirStack) + "/" + entryName.TrimEnd('/')
+                if (k.Key = Key.Enter || k.Key = Key.CursorRight) && entryName.EndsWith Path.DirectorySeparatorChar then
+                    let newDir = List.head (dirStack) + string Path.DirectorySeparatorChar + entryName.TrimEnd(Path.DirectorySeparatorChar)
                     dirStack <- newDir :: dirStack
                     updateData newDir fsEntries
                     updateViews()
