@@ -79,24 +79,29 @@ module Gui =
                         LblTotSize.Text <- ustr totSizeStr)
 
                 let entryName = lstData.[u.SelectedItem].Substring(13)
-                if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l') && entryName.EndsWith Path.DirectorySeparatorChar then
-                    let newDir = List.head (dirStack) + string Path.DirectorySeparatorChar + entryName.TrimEnd(Path.DirectorySeparatorChar)
+                if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l')
+                   && entryName.EndsWith Path.DirectorySeparatorChar then
+                    let newDir =
+                        List.head (dirStack) + string Path.DirectorySeparatorChar
+                        + entryName.TrimEnd(Path.DirectorySeparatorChar)
                     dirStack <- newDir :: dirStack
                     updateData newDir fsEntries
                     updateViews()
                     true
-                elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft || k.KeyValue = int 'h') && List.length dirStack > 1 then
+                elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft || k.KeyValue = int 'h')
+                     && List.length dirStack > 1 then
                     dirStack <- dirStack.Tail
                     updateData (List.head dirStack) fsEntries
                     updateViews()
                     true
                 elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
-                    if 0 = MessageBox.Query (50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
-                        let entryToDelete = List.head (dirStack) + string Path.DirectorySeparatorChar + entryName.TrimEnd(Path.DirectorySeparatorChar)
-                        if entryName.EndsWith Path.DirectorySeparatorChar then
-                            Directory.Delete(entryToDelete, true)
-                        else
-                            File.Delete(entryToDelete)
+                    if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                        let entryToDelete =
+                            List.head (dirStack) + string Path.DirectorySeparatorChar
+                            + entryName.TrimEnd(Path.DirectorySeparatorChar)
+                        if entryName.EndsWith Path.DirectorySeparatorChar
+                        then Directory.Delete(entryToDelete, true)
+                        else File.Delete(entryToDelete)
                         updateData (List.head dirStack) fsEntries
                         updateViews()
                     true
