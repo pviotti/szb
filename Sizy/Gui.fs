@@ -18,6 +18,7 @@ let ustr (x: string) = ustring.Make(x)
 // XXX Mutable shared state
 let mutable dirStack: string list = []
 let mutable lstData: string [] = [||]
+let mutable currPathStr = ""
 let mutable totSizeStr = ""
 let mutable ls: string seq = Seq.empty<string>
 let fsEntries = ConcurrentDictionary<string, Entry>()
@@ -46,6 +47,7 @@ let updateData path entries =
     ls <- Directory.EnumerateFileSystemEntries path
     let sizes = PSeq.map (getSize (FileSystem()) entries errors) ls
     totSizeStr <- getTotalSizeStr (PSeq.sum sizes)
+    currPathStr <- path
     lstData <- getEntries ls entries
 
 #endregion
@@ -64,15 +66,18 @@ module Gui =
                 else
                     base.ProcessKey k }
 
+    let LblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
+
     let LblTotSize = Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Fill(), Height = Dim.Sized(1))
 
     let LstView =
-        { new ListView([||], X = Pos.At(0), Y = Pos.At(0), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
+        { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
             member u.ProcessKey(k: KeyEvent) =
 
                 let updateViews() =
                     Application.MainLoop.Invoke(fun () ->
                         u.SetSource lstData
+                        LblPath.Text <- ustr currPathStr
                         LblTotSize.Text <- ustr totSizeStr)
 
                 let entryName = lstData.[u.SelectedItem].Substring(13)
@@ -123,8 +128,10 @@ let main argv =
             updateData path fsEntries
             Application.MainLoop.Invoke(fun () ->
                 Gui.LstView.SetSource lstData
+                Gui.LblPath.Text <- ustr currPathStr
                 Gui.LblTotSize.Text <- ustr totSizeStr)
 
+            Gui.Window.Add(Gui.LblPath)
             Gui.Window.Add(Gui.LstView)
             Gui.Window.Add(Gui.LblTotSize)
             Application.Top.Add(Gui.Window)
