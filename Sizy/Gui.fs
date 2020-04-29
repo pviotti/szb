@@ -18,7 +18,6 @@ let ustr (x: string) = ustring.Make(x)
 // XXX Mutable shared state
 let mutable dirStack: string list = []
 let mutable lstData: string [] = [||]
-let mutable currPathStr = ""
 let mutable totSizeStr = ""
 let mutable ls: string seq = Seq.empty<string>
 let fsEntries = ConcurrentDictionary<string, Entry>()
@@ -47,7 +46,6 @@ let updateData path entries =
     ls <- Directory.EnumerateFileSystemEntries path
     let sizes = PSeq.map (getSize (FileSystem()) entries errors) ls
     totSizeStr <- getTotalSizeStr (PSeq.sum sizes)
-    currPathStr <- path
     lstData <- getEntries ls entries
 
 #endregion
@@ -77,7 +75,7 @@ module Gui =
                 let updateViews() =
                     Application.MainLoop.Invoke(fun () ->
                         u.SetSource lstData
-                        LblPath.Text <- ustr currPathStr
+                        LblPath.Text <- ustr (List.head dirStack)
                         LblTotSize.Text <- ustr totSizeStr)
 
                 let entryName = lstData.[u.SelectedItem].Substring(13)
@@ -88,12 +86,19 @@ module Gui =
                     updateViews()
                     true
                 elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft) && List.length dirStack > 1 then
-                    dirStack <-
-                        match dirStack with
-                        | _ :: tl -> tl
-                        | [] -> []
+                    dirStack <- dirStack.Tail
                     updateData (List.head dirStack) fsEntries
                     updateViews()
+                    true
+                elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
+                    if 0 = MessageBox.Query (50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                        let entryToDelete = List.head (dirStack) + string Path.DirectorySeparatorChar + entryName.TrimEnd(Path.DirectorySeparatorChar)
+                        if entryName.EndsWith Path.DirectorySeparatorChar then
+                            Directory.Delete(entryToDelete, true)
+                        else
+                            File.Delete(entryToDelete)
+                        updateData (List.head dirStack) fsEntries
+                        updateViews()
                     true
                 else
                     base.ProcessKey k }
@@ -128,7 +133,7 @@ let main argv =
             updateData path fsEntries
             Application.MainLoop.Invoke(fun () ->
                 Gui.LstView.SetSource lstData
-                Gui.LblPath.Text <- ustr currPathStr
+                Gui.LblPath.Text <- ustr (List.head dirStack)
                 Gui.LblTotSize.Text <- ustr totSizeStr)
 
             Gui.Window.Add(Gui.LblPath)
