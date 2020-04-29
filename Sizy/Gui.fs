@@ -79,13 +79,13 @@ module Gui =
                         LblTotSize.Text <- ustr totSizeStr)
 
                 let entryName = lstData.[u.SelectedItem].Substring(13)
-                if (k.Key = Key.Enter || k.Key = Key.CursorRight) && entryName.EndsWith Path.DirectorySeparatorChar then
+                if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l') && entryName.EndsWith Path.DirectorySeparatorChar then
                     let newDir = List.head (dirStack) + string Path.DirectorySeparatorChar + entryName.TrimEnd(Path.DirectorySeparatorChar)
                     dirStack <- newDir :: dirStack
                     updateData newDir fsEntries
                     updateViews()
                     true
-                elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft) && List.length dirStack > 1 then
+                elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft || k.KeyValue = int 'h') && List.length dirStack > 1 then
                     dirStack <- dirStack.Tail
                     updateData (List.head dirStack) fsEntries
                     updateViews()
@@ -100,6 +100,10 @@ module Gui =
                         updateData (List.head dirStack) fsEntries
                         updateViews()
                     true
+                elif k.KeyValue = int 'j' then
+                    u.MoveDown()
+                elif k.KeyValue = int 'k' then
+                    u.MoveUp()
                 else
                     base.ProcessKey k }
 
