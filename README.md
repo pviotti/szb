@@ -17,11 +17,13 @@ contribute. :nerd_face:
 < TODO insert gui screenshot >
 ```
 
- - `return` or `right cursor`: to browse into a directory
- - `b` or `left cursor`: to browse back into the parent directory
- - `d`: *[not implemented yet]* delete file or directory (requires confirmation)
+ - `return` or `right cursor` or `l`: to browse into a directory
+ - `b` or `left cursor` or `h`: to browse back into the parent directory
+ - `j` or `down cursor`: move down the list
+ - `k` or `up cursor`: move up the list
+ - `d`: delete file or directory (requires confirmation)
  - `q`: exit
- - `?`: show command help
+ - `?`: *[not implemented yet]* show command help
 
 
 To only print the result for the input folder, you can use the `-p` flag.  
