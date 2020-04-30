@@ -13,16 +13,7 @@ contribute. :nerd_face:
 
 ## Usage
 
-```
-< TODO insert gui screenshot >
-```
-
- - `return` or `right cursor`: to browse into a directory
- - `b` or `left cursor`: to browse back into the parent directory
- - `d`: *[not implemented yet]* delete file or directory (requires confirmation)
- - `q`: exit
- - `?`: show command help
-
+![screenshot](https://user-images.githubusercontent.com/1350095/80761044-bd12b680-8b31-11ea-991d-fd54a8ed77fe.png)
 
 To only print the result for the input folder, you can use the `-p` flag.  
 These are the command line options currently available:

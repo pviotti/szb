@@ -13,6 +13,15 @@ open FSharp.Collections.ParallelSeq
 
 let ustr (x: string) = ustring.Make(x)
 
+let helpMsg = "These are the available commands:\n\
+                 - return or → or l:   browse into a directory\n\
+                 - b or ← or h:        browse into the parent directory\n\
+                 - j or ↓:             move down the list\n\
+                 - k or ↑:             move up the list\n\
+                 - d or delete:        delete file or directory (requires confirmation)\n\
+                 - q:                  exit\n\
+                 - ? or h:             show this help message."
+
 #region "Data and related functions"
 
 // XXX Mutable shared state
@@ -40,7 +49,7 @@ let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
     let createStrFun = fun p -> sprintf "%s" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
     let foldersSeq = filterSortEntries ls fltrFoldersFun |> PSeq.map createStrFun
     let filesSeq = filterSortEntries ls fltrFilesFun |> PSeq.map createStrFun
-    PSeq.append foldersSeq filesSeq  |> PSeq.toArray
+    PSeq.append foldersSeq filesSeq |> PSeq.toArray
 
 let updateData path entries =
     ls <- Directory.EnumerateFileSystemEntries path
@@ -52,41 +61,66 @@ let updateData path entries =
 
 #region "UI components"
 
-let window =
-    { new Window(ustr "Sizy", X = Pos.op_Implicit (0), Y = Pos.op_Implicit (0), Width = Dim.Fill(), Height = Dim.Fill()) with
-        member __.ProcessKey(k: KeyEvent) =
-            if k.KeyValue = int 'q' then
-                Application.Top.Running <- false
-                true
-            else
-                base.ProcessKey k }
+module Gui =
 
-let lblTotSize = Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Fill(), Height = Dim.Sized(1))
+    let Window =
+        { new Window(ustr PROGRAM_NAME, X = Pos.op_Implicit (0), Y = Pos.op_Implicit (0), Width = Dim.Fill(),
+                     Height = Dim.Fill()) with
+            member __.ProcessKey(k: KeyEvent) =
+                if k.KeyValue = int 'q' then
+                    Application.Top.Running <- false
+                    true
+                elif k.KeyValue = int '?' || k.KeyValue = int 'h' then
+                    MessageBox.Query(77, 13, "Help", helpMsg, "OK") |> ignore
+                    true
+                else
+                    base.ProcessKey k }
 
-let lstView =
-    { new ListView([||], X = Pos.At(0), Y = Pos.At(0), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
-        member u.ProcessKey(k: KeyEvent) =
-            let entryName = lstData.[u.SelectedItem].Substring(13)
-            if (k.Key = Key.Enter || k.Key = Key.CursorRight) && entryName.EndsWith "/" then
-                let newDir = List.head (dirStack) + "/" + entryName.TrimEnd('/')
-                dirStack <- newDir :: dirStack
-                updateData newDir fsEntries
-                Application.MainLoop.Invoke(fun () ->
-                    u.SetSource lstData
-                    lblTotSize.Text <- ustr totSizeStr)
-                true
-            elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft) && List.length dirStack > 1 then
-                dirStack <-
-                    match dirStack with
-                    | _ :: tl -> tl
-                    | [] -> []
-                updateData (List.head dirStack) fsEntries
-                Application.MainLoop.Invoke(fun () ->
-                    u.SetSource lstData
-                    lblTotSize.Text <- ustr totSizeStr)
-                true
-            else
-                base.ProcessKey k }
+    let LblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
+
+    let LblTotSize = Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Fill(), Height = Dim.Sized(1))
+
+    let LstView =
+        { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
+            member u.ProcessKey(k: KeyEvent) =
+
+                let updateViews() =
+                    Application.MainLoop.Invoke(fun () ->
+                        u.SetSource lstData
+                        LblPath.Text <- ustr (List.head dirStack)
+                        LblTotSize.Text <- ustr totSizeStr)
+
+                let entryName = lstData.[u.SelectedItem].Substring(13)
+                if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l')
+                   && entryName.EndsWith Path.DirectorySeparatorChar then
+                    let newDir =
+                        List.head (dirStack) + string Path.DirectorySeparatorChar
+                        + entryName.TrimEnd(Path.DirectorySeparatorChar)
+                    dirStack <- newDir :: dirStack
+                    updateData newDir fsEntries
+                    updateViews()
+                    true
+                elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft || k.KeyValue = int 'h')
+                     && List.length dirStack > 1 then
+                    dirStack <- dirStack.Tail
+                    updateData (List.head dirStack) fsEntries
+                    updateViews()
+                    true
+                elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
+                    if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                        let entryToDelete =
+                            List.head (dirStack) + string Path.DirectorySeparatorChar
+                            + entryName.TrimEnd(Path.DirectorySeparatorChar)
+                        delete entryToDelete
+                        updateData (List.head dirStack) fsEntries
+                        updateViews()
+                    true
+                elif k.KeyValue = int 'j' then
+                    u.MoveDown()
+                elif k.KeyValue = int 'k' then
+                    u.MoveUp()
+                else
+                    base.ProcessKey k }
 
 #endregion
 
@@ -101,7 +135,9 @@ let main argv =
             let stopWatch = Diagnostics.Stopwatch.StartNew()
 
             updateData path fsEntries
-            let printFun = fun p -> printf "%s\n" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
+            let printFun =
+                fun path ->
+                    printf "%s\n" (getSizeStr fsEntries.[path].Name fsEntries.[path].Size)
             filterSortEntries ls fltrFoldersFun |> Seq.iter printFun
             filterSortEntries ls fltrFilesFun |> Seq.iter printFun
             printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
@@ -115,12 +151,14 @@ let main argv =
             dirStack <- [ path ]
             updateData path fsEntries
             Application.MainLoop.Invoke(fun () ->
-                lstView.SetSource lstData
-                lblTotSize.Text <- ustr totSizeStr)
+                Gui.LstView.SetSource lstData
+                Gui.LblPath.Text <- ustr (List.head dirStack)
+                Gui.LblTotSize.Text <- ustr totSizeStr)
 
-            window.Add(lstView)
-            window.Add(lblTotSize)
-            Application.Top.Add(window)
+            Gui.Window.Add(Gui.LblPath)
+            Gui.Window.Add(Gui.LstView)
+            Gui.Window.Add(Gui.LblTotSize)
+            Application.Top.Add(Gui.Window)
             Application.Run()
         0
     | ReturnVal ret -> ret
