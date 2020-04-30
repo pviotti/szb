@@ -46,3 +46,9 @@ let getSizeUnit bytes =
         Math.Round(float(bytes) / 1024.0), SizeUnits.[1]
     else
         float(bytes), SizeUnits.[0]
+
+let delete(path:string) =
+    if path.EndsWith Path.DirectorySeparatorChar then
+        Directory.Delete(path, true)
+    else
+        File.Delete(path)

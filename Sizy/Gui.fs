@@ -99,9 +99,7 @@ module Gui =
                         let entryToDelete =
                             List.head (dirStack) + string Path.DirectorySeparatorChar
                             + entryName.TrimEnd(Path.DirectorySeparatorChar)
-                        if entryName.EndsWith Path.DirectorySeparatorChar
-                        then Directory.Delete(entryToDelete, true)
-                        else File.Delete(entryToDelete)
+                        delete entryToDelete
                         updateData (List.head dirStack) fsEntries
                         updateViews()
                     true
