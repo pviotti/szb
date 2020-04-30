@@ -23,7 +23,7 @@ contribute. :nerd_face:
  - `k` or `up cursor`: move up the list
  - `d`: delete file or directory (requires confirmation)
  - `q`: exit
- - `?`: *[not implemented yet]* show command help
+ - `?`: show command help
 
 
 To only print the result for the input folder, you can use the `-p` flag.  

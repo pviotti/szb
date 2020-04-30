@@ -13,6 +13,15 @@ open FSharp.Collections.ParallelSeq
 
 let ustr (x: string) = ustring.Make(x)
 
+let helpMsg = "These are the available commands:\n\
+                 - return or → or l:   browse into a directory\n\
+                 - b or ← or h:        browse into the parent directory\n\
+                 - j or ↓:             move down the list\n\
+                 - k or ↑:             move up the list\n\
+                 - d or delete:        delete file or directory (requires confirmation)\n\
+                 - q:                  exit\n\
+                 - ? or h:             show this help message."
+
 #region "Data and related functions"
 
 // XXX Mutable shared state
@@ -60,6 +69,9 @@ module Gui =
             member __.ProcessKey(k: KeyEvent) =
                 if k.KeyValue = int 'q' then
                     Application.Top.Running <- false
+                    true
+                elif k.KeyValue = int '?' || k.KeyValue = int 'h' then
+                    MessageBox.Query(77, 13, "Help", helpMsg, "OK") |> ignore
                     true
                 else
                     base.ProcessKey k }
