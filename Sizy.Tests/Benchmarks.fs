@@ -12,11 +12,11 @@ type Benchmarks () =
     member val public NBytesValues = seq {0L .. 10010L .. 100000L}
 
     [<Benchmark>]
-    member this.GetSizeUnit () = getSizeUnit(this.NBytes) |> ignore
+    member this.GetSizeUnit () = FsController.GetSizeUnit(this.NBytes) |> ignore
 
 module Program =
     [<EntryPoint>]
-    let main argv =
+    let main _ =
         BenchmarkRunner.Run<Benchmarks>() |> ignore
         0
-    
+ 
