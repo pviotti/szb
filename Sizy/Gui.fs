@@ -4,7 +4,6 @@ open Terminal.Gui
 open NStack
 
 open System
-open System.IO
 open Sizy.Filesystem
 open Sizy.Config
 open System.IO.Abstractions
@@ -20,7 +19,7 @@ let helpMsg = "These are the available commands:\n\
                  - k or ↑:             move up the list\n\
                  - d or delete:        delete file or directory (requires confirmation)\n\
                  - q:                  exit\n\
-                 - ? or h:             show this help message."
+                 - ?:                  show this help message."
 
 #region "Data and related functions"
 
@@ -32,12 +31,14 @@ let mutable ls: string seq = Seq.empty<string>
 let fsEntries = ConcurrentDictionary<string, Entry>()
 let errors = ConcurrentDictionary<string, string>()
 
+let fs = FsController(FileSystem())
+
 let getSizeStr name size =
-    let newSize, sizeUnit = getSizeUnit size
+    let newSize, sizeUnit = FsController.GetSizeUnit size
     sprintf "%10.0f %-1s %s" newSize sizeUnit name
 
 let getTotalSizeStr totSize =
-    let totSize, totSizeUnit = getSizeUnit totSize
+    let totSize, totSizeUnit = FsController.GetSizeUnit totSize
     sprintf "Tot. %5.0f %s" totSize totSizeUnit
 
 let filterSortEntries ls filterFun = PSeq.filter filterFun ls |> PSeq.sort
@@ -52,8 +53,8 @@ let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
     PSeq.append foldersSeq filesSeq |> PSeq.toArray
 
 let updateData path entries =
-    ls <- Directory.EnumerateFileSystemEntries path
-    let sizes = PSeq.map (getSize (FileSystem()) entries errors) ls
+    ls <- fs.List path
+    let sizes = PSeq.map (fs.GetSize entries errors) ls
     totSizeStr <- getTotalSizeStr (PSeq.sum sizes)
     lstData <- getEntries ls entries
 
@@ -70,7 +71,7 @@ module Gui =
                 if k.KeyValue = int 'q' then
                     Application.Top.Running <- false
                     true
-                elif k.KeyValue = int '?' || k.KeyValue = int 'h' then
+                elif k.KeyValue = int '?' then
                     MessageBox.Query(77, 13, "Help", helpMsg, "OK") |> ignore
                     true
                 else
@@ -92,10 +93,10 @@ module Gui =
 
                 let entryName = lstData.[u.SelectedItem].Substring(13)
                 if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l')
-                   && entryName.EndsWith Path.DirectorySeparatorChar then
+                   && entryName.EndsWith fs.DirectorySeparatorChar then
                     let newDir =
-                        List.head (dirStack) + string Path.DirectorySeparatorChar
-                        + entryName.TrimEnd(Path.DirectorySeparatorChar)
+                        List.head (dirStack) + string fs.DirectorySeparatorChar
+                        + entryName.TrimEnd(fs.DirectorySeparatorChar)
                     dirStack <- newDir :: dirStack
                     updateData newDir fsEntries
                     updateViews()
@@ -109,9 +110,9 @@ module Gui =
                 elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
                     if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
                         let entryToDelete =
-                            List.head (dirStack) + string Path.DirectorySeparatorChar
-                            + entryName.TrimEnd(Path.DirectorySeparatorChar)
-                        delete entryToDelete
+                            List.head (dirStack) + string fs.DirectorySeparatorChar
+                            + entryName.TrimEnd(fs.DirectorySeparatorChar)
+                        fs.Delete entryToDelete
                         updateData (List.head dirStack) fsEntries
                         updateViews()
                     true
@@ -129,7 +130,7 @@ let main argv =
     match getConfiguration argv with
     | Config config ->
         let path =
-            if config.Contains Input then config.GetResult Input else Directory.GetCurrentDirectory()
+            if config.Contains Input then config.GetResult Input else fs.GetCurrentDirectory()
 
         if config.Contains Print_Only then
             let stopWatch = Diagnostics.Stopwatch.StartNew()
