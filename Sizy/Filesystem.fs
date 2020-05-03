@@ -62,3 +62,6 @@ type FsController(fs0: IFileSystem) =
             Math.Round(float(bytes) / 1024.0), SizeUnits.[1]
         else
             float(bytes), SizeUnits.[0]
+
+    static member IsFolder (fsEntries: IDictionary<string, Entry>) (path: string) = fsEntries.ContainsKey path && fsEntries.[path].IsDir
+    static member IsFile (fsEntries: IDictionary<string, Entry>) (path: string) = fsEntries.ContainsKey path && not fsEntries.[path].IsDir
