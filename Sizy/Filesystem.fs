@@ -21,8 +21,8 @@ let ErrorSize = 0L
 
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
-type FsController(fs0: IFileSystem) = 
-    let fs = fs0
+type FsController(fs: IFileSystem) = 
+    let fs = fs
 
     member this.GetSize (fsEntries: IDictionary<string, Entry>) path =
         if fsEntries.ContainsKey path then
@@ -43,10 +43,10 @@ type FsController(fs0: IFileSystem) =
                 0L
 
     member this.GetEntryName (path:string) (isDir:bool) =
-        Array.last (path.Split this.DirectorySeparatorChar) + if isDir then string this.DirectorySeparatorChar else ""
+        Array.last (path.Split this.DirectorySeparator) + if isDir then string this.DirectorySeparator else ""
 
-    member _.Delete(path:string) =
-        if path.EndsWith fs.Path.DirectorySeparatorChar then
+    member this.Delete(path:string) =
+        if path.EndsWith this.DirectorySeparator then
             fs.Directory.Delete(path, true)
         else
             fs.File.Delete(path)
@@ -54,7 +54,7 @@ type FsController(fs0: IFileSystem) =
     member _.List(path: string) = 
         fs.Directory.EnumerateFileSystemEntries path
 
-    member _.DirectorySeparatorChar : char = fs.Path.DirectorySeparatorChar
+    member _.DirectorySeparator : char = fs.Path.DirectorySeparatorChar
 
     member _.GetCurrentDirectory = fs.Directory.GetCurrentDirectory
 
