@@ -22,11 +22,13 @@ let helpMsg = "\n- return or → or l:   browse into a directory\n\
 
 #region "Data and related functions"
 
-// mutable shared state
-let mutable dirStack: string list = []
-let mutable lstData: string [] = [||]
-let mutable totSizeStr = ""
-let mutable ls: string seq = Seq.empty<string>
+type GuiStateEntry = {CurrPath:string; LstData: string []; TotSizeStr: string; Ls: string seq }
+type GuiState = GuiStateEntry list
+
+// Mutable state:
+// - a stack (list) of GuiStateEntry
+// - a hashmap of path -> Entry
+let mutable guiState : GuiState = []
 let fsEntries = ConcurrentDictionary<string, Entry>()
 
 let fs = FsController(FileSystem())
@@ -43,11 +45,16 @@ let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
     let filesSeq = filterSortEntries ls (FsController.IsFile fsEntries) |> PSeq.map createStrFun
     PSeq.append foldersSeq filesSeq |> PSeq.toArray
 
-let updateData path entries =
-    ls <- fs.List path
+let addGuiState path entries guiStateTail =
+    let ls = fs.List path
     let sizes = PSeq.map (fs.GetSize entries) ls
-    totSizeStr <- getTotalSizeStr (PSeq.sum sizes)
-    lstData <- getEntries ls entries
+    let totSizeStr = getTotalSizeStr (PSeq.sum sizes)
+    let lstData = getEntries ls entries
+    guiState <- {CurrPath=path; LstData=lstData; TotSizeStr=totSizeStr; Ls=ls} :: guiStateTail
+
+let updateCurrentState path entries =
+    // TODO update size count of all ancestor directories
+    addGuiState path entries (List.tail guiState)
 
 #endregion
 
@@ -74,43 +81,43 @@ module Gui =
 
     let LstView =
         { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
-            member u.ProcessKey(k: KeyEvent) =
+            member this.ProcessKey(k: KeyEvent) =
 
                 let updateViews() =
                     Application.MainLoop.Invoke(fun () ->
-                        u.SetSource lstData
-                        LblPath.Text <- ustr (List.head dirStack)
-                        LblTotSize.Text <- ustr totSizeStr)
+                        let currState = List.head(guiState)
+                        this.SetSource currState.LstData
+                        LblPath.Text <- ustr currState.CurrPath
+                        LblTotSize.Text <- ustr currState.TotSizeStr)
 
-                let entryName = lstData.[u.SelectedItem].Substring(13)
+                let currState = List.head(guiState)
+                let entryName = currState.LstData.[this.SelectedItem].Substring(13) // TODO fix IndexOutOfRangeException when list is empty
                 if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l')
-                   && entryName.EndsWith fs.DirectorySeparatorChar then
+                   && entryName.EndsWith fs.DirectorySeparator then
                     let newDir =
-                        List.head (dirStack) + string fs.DirectorySeparatorChar
-                        + entryName.TrimEnd(fs.DirectorySeparatorChar)
-                    dirStack <- newDir :: dirStack
-                    updateData newDir fsEntries
+                        currState.CurrPath + string fs.DirectorySeparator
+                        + entryName.TrimEnd(fs.DirectorySeparator)
+                    addGuiState newDir fsEntries guiState
                     updateViews()
                     true
                 elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft || k.KeyValue = int 'h')
-                     && List.length dirStack > 1 then
-                    dirStack <- dirStack.Tail
-                    updateData (List.head dirStack) fsEntries
+                     && List.length guiState > 1 then
+                    guiState <- List.tail guiState
                     updateViews()
                     true
                 elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
                     if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
                         let entryToDelete =
-                            List.head (dirStack) + string fs.DirectorySeparatorChar
-                            + entryName.TrimEnd(fs.DirectorySeparatorChar)
+                            currState.CurrPath + string fs.DirectorySeparator
+                            + entryName.TrimEnd(fs.DirectorySeparator)
                         fs.Delete entryToDelete
-                        updateData (List.head dirStack) fsEntries
+                        updateCurrentState currState.CurrPath fsEntries
                         updateViews()
                     true
                 elif k.KeyValue = int 'j' then
-                    u.MoveDown()
+                    this.MoveDown()
                 elif k.KeyValue = int 'k' then
-                    u.MoveUp()
+                    this.MoveUp()
                 else
                     base.ProcessKey k }
 
@@ -123,30 +130,29 @@ let main argv =
         let path =
             if config.Contains Input then config.GetResult Input else fs.GetCurrentDirectory()
 
+        addGuiState path fsEntries guiState
         if config.Contains Print_Only then
             let stopWatch = Diagnostics.Stopwatch.StartNew()
 
-            updateData path fsEntries
             let printFun =
                 fun path ->
                     printf "%s\n" (FsController.GetEntryString fsEntries.[path])
+            let state = List.head guiState
+            let ls = state.Ls
+            let totSizeStr = state.TotSizeStr
             filterSortEntries ls (FsController.IsFolder fsEntries) |> Seq.iter printFun
             filterSortEntries ls (FsController.IsFile fsEntries) |> Seq.iter printFun
             printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
 
-            // TODO: fix errors output
-            // Seq.iter (fun x ->
-            //     eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
-            eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
+            eprintfn "Execution time: %f" stopWatch.Elapsed.TotalMilliseconds
         else
             Application.Init()
 
-            dirStack <- [ path ]
-            updateData path fsEntries
             Application.MainLoop.Invoke(fun () ->
-                Gui.LstView.SetSource lstData
-                Gui.LblPath.Text <- ustr (List.head dirStack)
-                Gui.LblTotSize.Text <- ustr totSizeStr)
+                let currState = List.head(guiState)
+                Gui.LstView.SetSource currState.LstData
+                Gui.LblPath.Text <- ustr currState.CurrPath
+                Gui.LblTotSize.Text <- ustr currState.TotSizeStr)
 
             Gui.Window.Add(Gui.LblPath)
             Gui.Window.Add(Gui.LstView)
