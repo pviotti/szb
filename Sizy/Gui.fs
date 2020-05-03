@@ -28,13 +28,8 @@ let mutable lstData: string [] = [||]
 let mutable totSizeStr = ""
 let mutable ls: string seq = Seq.empty<string>
 let fsEntries = ConcurrentDictionary<string, Entry>()
-let errors = ConcurrentDictionary<string, string>()
 
 let fs = FsController(FileSystem())
-
-let getSizeStr name size =
-    let newSize, sizeUnit = FsController.GetSizeUnit size
-    sprintf "%10.0f %-1s %s" newSize sizeUnit name
 
 let getTotalSizeStr totSize =
     let totSize, totSizeUnit = FsController.GetSizeUnit totSize
@@ -43,14 +38,14 @@ let getTotalSizeStr totSize =
 let filterSortEntries ls filterFun = PSeq.filter filterFun ls |> PSeq.sort
 
 let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
-    let createStrFun = fun p -> sprintf "%s" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
+    let createStrFun = fun p -> sprintf "%s" (FsController.GetEntryString fsEntries.[p])
     let foldersSeq = filterSortEntries ls (FsController.IsFolder fsEntries) |> PSeq.map createStrFun
     let filesSeq = filterSortEntries ls (FsController.IsFile fsEntries) |> PSeq.map createStrFun
     PSeq.append foldersSeq filesSeq |> PSeq.toArray
 
 let updateData path entries =
     ls <- fs.List path
-    let sizes = PSeq.map (fs.GetSize entries errors) ls
+    let sizes = PSeq.map (fs.GetSize entries) ls
     totSizeStr <- getTotalSizeStr (PSeq.sum sizes)
     lstData <- getEntries ls entries
 
@@ -134,13 +129,14 @@ let main argv =
             updateData path fsEntries
             let printFun =
                 fun path ->
-                    printf "%s\n" (getSizeStr fsEntries.[path].Name fsEntries.[path].Size)
+                    printf "%s\n" (FsController.GetEntryString fsEntries.[path])
             filterSortEntries ls (FsController.IsFolder fsEntries) |> Seq.iter printFun
             filterSortEntries ls (FsController.IsFile fsEntries) |> Seq.iter printFun
             printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
 
-            Seq.iter (fun x ->
-                eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
+            // TODO: fix errors output
+            // Seq.iter (fun x ->
+            //     eprintfn "\n\t%s - %s" x errors.[x]) errors.Keys
             eprintfn "Exec time: %f" stopWatch.Elapsed.TotalMilliseconds
         else
             Application.Init()
