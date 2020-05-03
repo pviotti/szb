@@ -12,13 +12,13 @@ open FSharp.Collections.ParallelSeq
 
 let ustr (x: string) = ustring.Make(x)
 
-let helpMsg = "\n- return or → or l:   browse into a directory\n\
-                 - b or ← or h:        browse into the parent directory\n\
-                 - j or ↓:             move down the list\n\
-                 - k or ↑:             move up the list\n\
-                 - d or delete:        delete file or directory (requires confirmation)\n\
-                 - q:                  exit\n\
-                 - ?:                  show this help message."
+let helpMsg = "\n- → or l:         browse into a directory\n\
+                 - ← or h:         browse into the parent directory\n\
+                 - ↓ or j:         move down the list\n\
+                 - ↑ or k:         move up the list\n\
+                 - d or delete:    delete file or directory (requires confirmation)\n\
+                 - q:              exit\n\
+                 - ?:              show this help message."
 
 #region "Data and related functions"
 
@@ -70,7 +70,7 @@ module Gui =
                     Application.Top.Running <- false
                     true
                 elif k.KeyValue = int '?' then
-                    MessageBox.Query(76, 14, "Help", helpMsg, "OK") |> ignore
+                    MessageBox.Query(72, 14, "Help", helpMsg, "OK") |> ignore
                     true
                 else
                     base.ProcessKey k }
@@ -92,7 +92,7 @@ module Gui =
 
                 let currState = List.head(guiState)
                 let entryName = currState.LstData.[this.SelectedItem].Substring(13) // TODO fix IndexOutOfRangeException when list is empty
-                if (k.Key = Key.Enter || k.Key = Key.CursorRight || k.KeyValue = int 'l')
+                if (k.Key = Key.CursorRight || k.KeyValue = int 'l')
                    && entryName.EndsWith fs.DirectorySeparator then
                     let newDir =
                         currState.CurrPath + string fs.DirectorySeparator
@@ -100,7 +100,7 @@ module Gui =
                     addGuiState newDir fsEntries guiState
                     updateViews()
                     true
-                elif (k.KeyValue = int 'b' || k.Key = Key.CursorLeft || k.KeyValue = int 'h')
+                elif (k.Key = Key.CursorLeft || k.KeyValue = int 'h')
                      && List.length guiState > 1 then
                     guiState <- List.tail guiState
                     updateViews()
