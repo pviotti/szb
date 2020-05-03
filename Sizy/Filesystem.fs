@@ -7,30 +7,35 @@ open System.Collections.Generic
 
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
-type Entry(path: string, size: int64, isDir: bool, sep: char) =
-    member _.Name =
-        Array.last (path.Split sep) + if isDir then string sep else ""
-    member _.Size = size
-    member _.IsDir = isDir
+type Error = {Name: string; Message: string} 
+type FsEntry = {Name: string; Size: int64; IsDir: bool} 
+type Entry = 
+    | Error of Error 
+    | FsEntry of FsEntry
 
 type FsController(fs0: IFileSystem) = 
     let fs = fs0
 
-    member this.GetSize (fsEntries: IDictionary<string, Entry>) (errors: IDictionary<_, _>) path =
+    member this.GetSize (fsEntries: IDictionary<string, Entry>) path =
         if fsEntries.ContainsKey path then
-            fsEntries.[path].Size
+             match fsEntries.[path] with
+             | FsEntry {Name=_; Size=s; IsDir=_} -> s
+             | Error _ -> FsController.ErrorSize
         else
             try
                 let attr = fs.File.GetAttributes path
                 let size, isDir =
                     if attr.HasFlag FileAttributes.Directory
-                    then fs.Directory.EnumerateFileSystemEntries path |> Seq.sumBy (this.GetSize fsEntries errors), true
+                    then fs.Directory.EnumerateFileSystemEntries path |> Seq.sumBy (this.GetSize fsEntries), true
                     else fs.FileInfo.FromFileName(path).Length, false
-                fsEntries.[path] <- Entry(path, size, isDir, fs.Path.DirectorySeparatorChar)
+                fsEntries.[path] <- FsEntry {Name=this.GetEntryName path isDir; Size=size; IsDir=isDir}
                 size
             with ex ->
-                errors.[path] <- ex.Message
+                fsEntries.[path] <- Error {Name=path; Message=ex.Message}
                 0L
+
+    member this.GetEntryName (path:string) (isDir:bool) =
+        Array.last (path.Split this.DirectorySeparatorChar) + if isDir then string this.DirectorySeparatorChar else ""
 
     member _.Delete(path:string) =
         if path.EndsWith fs.Path.DirectorySeparatorChar then
@@ -41,9 +46,12 @@ type FsController(fs0: IFileSystem) =
     member _.List(path: string) = 
         fs.Directory.EnumerateFileSystemEntries path
 
-    member _.DirectorySeparatorChar = fs.Path.DirectorySeparatorChar
+    member _.DirectorySeparatorChar : char = fs.Path.DirectorySeparatorChar
 
     member _.GetCurrentDirectory = fs.Directory.GetCurrentDirectory
+
+    static member ErrorIsDir = true // if we represent file system entries which we couldn't analyse because of errors as dir
+    static member ErrorSize = -1L   // the fictictious size we give to file system entries we couldn't analyse
 
     static member GetSizeUnit bytes =
         if bytes <= 0L then
@@ -63,5 +71,22 @@ type FsController(fs0: IFileSystem) =
         else
             float(bytes), SizeUnits.[0]
 
-    static member IsFolder (fsEntries: IDictionary<string, Entry>) (path: string) = fsEntries.ContainsKey path && fsEntries.[path].IsDir
-    static member IsFile (fsEntries: IDictionary<string, Entry>) (path: string) = fsEntries.ContainsKey path && not fsEntries.[path].IsDir
+    static member GetEntryString (entry:Entry) : string=
+        match entry with
+        | FsEntry {Name=name; Size=size; IsDir=_} ->
+            let newSize, sizeUnit = FsController.GetSizeUnit size
+            sprintf "%10.0f %-1s %s" newSize sizeUnit name
+        | Error {Name=name; Message=msg} ->
+            sprintf "%10.0f %-1s %s \tError: %s" (float(FsController.ErrorSize)) SizeUnits.[0] name msg
+
+    static member IsFolder (fsEntries: IDictionary<string, Entry>) (path: string) =
+        fsEntries.ContainsKey path && 
+            match fsEntries.[path] with
+            | FsEntry {Name=_; Size=_; IsDir=isDir} -> isDir
+            | Error e -> FsController.ErrorIsDir
+
+    static member IsFile (fsEntries: IDictionary<string, Entry>) (path: string) =
+        fsEntries.ContainsKey path && 
+            match fsEntries.[path] with
+            | FsEntry {Name=_; Size=_; IsDir=isDir} -> not isDir
+            | Error e -> not FsController.ErrorIsDir
