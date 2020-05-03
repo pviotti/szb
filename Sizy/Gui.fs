@@ -12,8 +12,7 @@ open FSharp.Collections.ParallelSeq
 
 let ustr (x: string) = ustring.Make(x)
 
-let helpMsg = "These are the available commands:\n\
-                 - return or → or l:   browse into a directory\n\
+let helpMsg = "\n- return or → or l:   browse into a directory\n\
                  - b or ← or h:        browse into the parent directory\n\
                  - j or ↓:             move down the list\n\
                  - k or ↑:             move up the list\n\
@@ -23,7 +22,7 @@ let helpMsg = "These are the available commands:\n\
 
 #region "Data and related functions"
 
-// XXX Mutable shared state
+// mutable shared state
 let mutable dirStack: string list = []
 let mutable lstData: string [] = [||]
 let mutable totSizeStr = ""
@@ -43,13 +42,10 @@ let getTotalSizeStr totSize =
 
 let filterSortEntries ls filterFun = PSeq.filter filterFun ls |> PSeq.sort
 
-let fltrFoldersFun = fun x -> fsEntries.ContainsKey x && fsEntries.[x].IsDir
-let fltrFilesFun = fun x -> fsEntries.ContainsKey x && not fsEntries.[x].IsDir
-
 let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
     let createStrFun = fun p -> sprintf "%s" (getSizeStr fsEntries.[p].Name fsEntries.[p].Size)
-    let foldersSeq = filterSortEntries ls fltrFoldersFun |> PSeq.map createStrFun
-    let filesSeq = filterSortEntries ls fltrFilesFun |> PSeq.map createStrFun
+    let foldersSeq = filterSortEntries ls (FsController.IsFolder fsEntries) |> PSeq.map createStrFun
+    let filesSeq = filterSortEntries ls (FsController.IsFile fsEntries) |> PSeq.map createStrFun
     PSeq.append foldersSeq filesSeq |> PSeq.toArray
 
 let updateData path entries =
@@ -72,7 +68,7 @@ module Gui =
                     Application.Top.Running <- false
                     true
                 elif k.KeyValue = int '?' then
-                    MessageBox.Query(77, 13, "Help", helpMsg, "OK") |> ignore
+                    MessageBox.Query(76, 14, "Help", helpMsg, "OK") |> ignore
                     true
                 else
                     base.ProcessKey k }
@@ -139,8 +135,8 @@ let main argv =
             let printFun =
                 fun path ->
                     printf "%s\n" (getSizeStr fsEntries.[path].Name fsEntries.[path].Size)
-            filterSortEntries ls fltrFoldersFun |> Seq.iter printFun
-            filterSortEntries ls fltrFilesFun |> Seq.iter printFun
+            filterSortEntries ls (FsController.IsFolder fsEntries) |> Seq.iter printFun
+            filterSortEntries ls (FsController.IsFile fsEntries) |> Seq.iter printFun
             printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
 
             Seq.iter (fun x ->
