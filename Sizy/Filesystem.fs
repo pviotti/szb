@@ -5,13 +5,21 @@ open System.IO
 open System.IO.Abstractions
 open System.Collections.Generic
 
-let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
 type Error = {Name: string; Message: string} 
 type FsEntry = {Name: string; Size: int64; IsDir: bool} 
 type Entry = 
     | Error of Error 
     | FsEntry of FsEntry
+
+// Whether we represent as directories file system entries
+// which we couldn't analyse because of errors
+let ErrorIsDir = true 
+
+// The size we give to file system entries we couldn't analyse
+let ErrorSize = 0L   
+
+let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
 type FsController(fs0: IFileSystem) = 
     let fs = fs0
@@ -20,7 +28,7 @@ type FsController(fs0: IFileSystem) =
         if fsEntries.ContainsKey path then
              match fsEntries.[path] with
              | FsEntry {Name=_; Size=s; IsDir=_} -> s
-             | Error _ -> FsController.ErrorSize
+             | Error _ -> ErrorSize
         else
             try
                 let attr = fs.File.GetAttributes path
@@ -50,9 +58,6 @@ type FsController(fs0: IFileSystem) =
 
     member _.GetCurrentDirectory = fs.Directory.GetCurrentDirectory
 
-    static member ErrorIsDir = true // if we represent file system entries which we couldn't analyse because of errors as dir
-    static member ErrorSize = -1L   // the fictictious size we give to file system entries we couldn't analyse
-
     static member GetSizeUnit bytes =
         if bytes <= 0L then
             0.0, SizeUnits.[0]
@@ -77,16 +82,17 @@ type FsController(fs0: IFileSystem) =
             let newSize, sizeUnit = FsController.GetSizeUnit size
             sprintf "%10.0f %-1s %s" newSize sizeUnit name
         | Error {Name=name; Message=msg} ->
-            sprintf "%10.0f %-1s %s \tError: %s" (float(FsController.ErrorSize)) SizeUnits.[0] name msg
+            let newSize, sizeUnit = FsController.GetSizeUnit ErrorSize
+            sprintf "%10.0f %-1s %s \tError: %s" newSize sizeUnit name msg
 
     static member IsFolder (fsEntries: IDictionary<string, Entry>) (path: string) =
         fsEntries.ContainsKey path && 
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> isDir
-            | Error e -> FsController.ErrorIsDir
+            | Error e -> ErrorIsDir
 
     static member IsFile (fsEntries: IDictionary<string, Entry>) (path: string) =
         fsEntries.ContainsKey path && 
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> not isDir
-            | Error e -> not FsController.ErrorIsDir
+            | Error e -> not ErrorIsDir
