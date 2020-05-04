@@ -22,13 +22,18 @@ let helpMsg = "\n- → or l:         browse into a directory\n\
 
 #region "Data and related functions"
 
-type GuiStateEntry = {CurrPath:string; LstData: string []; TotSizeStr: string; Ls: string seq }
+type GuiStateEntry =
+    { CurrPath: string
+      LstData: string []
+      TotSizeStr: string
+      Ls: string seq }
+
 type GuiState = GuiStateEntry list
 
 // Mutable state:
 // - a stack (list) of GuiStateEntry
 // - a hashmap of path -> Entry
-let mutable guiState : GuiState = []
+let mutable state: GuiState = []
 let fsEntries = ConcurrentDictionary<string, Entry>()
 
 let fs = FsController(FileSystem())
@@ -37,24 +42,58 @@ let getTotalSizeStr totSize =
     let totSize, totSizeUnit = FsController.GetSizeUnit totSize
     sprintf "Tot. %5.0f %s" totSize totSizeUnit
 
-let filterSortEntries ls filterFun = PSeq.filter filterFun ls |> PSeq.sort
+let getEntries (ls: seq<string>) (fsEntries: ConcurrentDictionary<string, Entry>) =
 
-let getEntries ls (fsEntries: ConcurrentDictionary<string, Entry>) =
-    let createStrFun = fun p -> sprintf "%s" (FsController.GetEntryString fsEntries.[p])
-    let foldersSeq = filterSortEntries ls (FsController.IsFolder fsEntries) |> PSeq.map createStrFun
-    let filesSeq = filterSortEntries ls (FsController.IsFile fsEntries) |> PSeq.map createStrFun
-    PSeq.append foldersSeq filesSeq |> PSeq.toArray
+    let filterDirsInLs (KeyValue(path: string, value: Entry)) =
+        match value with
+        | FsEntry fsEntry -> fsEntry.IsDir
+        | Error _ -> ErrorIsDir
+        && Seq.contains path ls
 
-let addGuiState path entries guiStateTail =
+    let filterFilesInLs (KeyValue(path: string, value: Entry)) =
+        match value with
+        | FsEntry fsEntry -> not fsEntry.IsDir
+        | Error _ -> not ErrorIsDir
+        && Seq.contains path ls
+
+    let sortBySize (KeyValue(_: string, value: Entry)) =
+        match value with
+        | FsEntry fsEntry -> -fsEntry.Size
+        | Error _ -> ErrorSize
+
+    let valueEntryToString (KeyValue(_: string, value: Entry)) = FsController.GetEntryString value
+
+    let orderedDirs =
+        fsEntries
+        |> PSeq.filter filterDirsInLs
+        |> PSeq.sortBy sortBySize
+        |> PSeq.map valueEntryToString
+        |> PSeq.toArray
+
+    let orderedFiles =
+        fsEntries
+        |> PSeq.filter filterFilesInLs
+        |> PSeq.sortBy sortBySize
+        |> PSeq.map valueEntryToString
+        |> PSeq.toArray
+
+    Array.append orderedDirs orderedFiles
+
+let addState path entries stateNewTail =
     let ls = fs.List path
     let sizes = PSeq.map (fs.GetSize entries) ls
     let totSizeStr = getTotalSizeStr (PSeq.sum sizes)
     let lstData = getEntries ls entries
-    guiState <- {CurrPath=path; LstData=lstData; TotSizeStr=totSizeStr; Ls=ls} :: guiStateTail
+    state <-
+        { CurrPath = path
+          LstData = lstData
+          TotSizeStr = totSizeStr
+          Ls = ls }
+        :: stateNewTail
 
 let updateCurrentState path entries =
     // TODO update size count of all ancestor directories
-    addGuiState path entries (List.tail guiState)
+    addState path entries (List.tail state)
 
 #endregion
 
@@ -85,31 +124,28 @@ module Gui =
 
                 let updateViews() =
                     Application.MainLoop.Invoke(fun () ->
-                        let currState = List.head(guiState)
+                        let currState = List.head (state)
                         this.SetSource currState.LstData
                         LblPath.Text <- ustr currState.CurrPath
                         LblTotSize.Text <- ustr currState.TotSizeStr)
 
-                let currState = List.head(guiState)
-                let entryName = currState.LstData.[this.SelectedItem].Substring(13) // TODO fix IndexOutOfRangeException when list is empty
-                if (k.Key = Key.CursorRight || k.KeyValue = int 'l')
-                   && entryName.EndsWith fs.DirectorySeparator then
-                    let newDir =
-                        currState.CurrPath + string fs.DirectorySeparator
-                        + entryName.TrimEnd(fs.DirectorySeparator)
-                    addGuiState newDir fsEntries guiState
+                let currState = List.head (state)
+                let entryName =
+                    currState.LstData.[this.SelectedItem]
+                        .Substring(13) // TODO fix IndexOutOfRangeException when list is empty
+                if (k.Key = Key.CursorRight || k.KeyValue = int 'l') && entryName.EndsWith fs.DirSeparator then
+                    let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+                    addState newDir fsEntries state
                     updateViews()
                     true
-                elif (k.Key = Key.CursorLeft || k.KeyValue = int 'h')
-                     && List.length guiState > 1 then
-                    guiState <- List.tail guiState
+                elif (k.Key = Key.CursorLeft || k.KeyValue = int 'h') && List.length state > 1 then
+                    state <- List.tail state
                     updateViews()
                     true
                 elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
                     if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
                         let entryToDelete =
-                            currState.CurrPath + string fs.DirectorySeparator
-                            + entryName.TrimEnd(fs.DirectorySeparator)
+                            currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
                         fs.Delete entryToDelete
                         updateCurrentState currState.CurrPath fsEntries
                         updateViews()
@@ -128,28 +164,24 @@ let main argv =
     match getConfiguration argv with
     | Config config ->
         let path =
-            if config.Contains Input then config.GetResult Input else fs.GetCurrentDirectory()
+            if config.Contains Input then config.GetResult Input else fs.GetCurrDir()
 
-        addGuiState path fsEntries guiState
+        addState path fsEntries state
         if config.Contains Print_Only then
             let stopWatch = Diagnostics.Stopwatch.StartNew()
 
-            let printFun =
-                fun path ->
-                    printf "%s\n" (FsController.GetEntryString fsEntries.[path])
-            let state = List.head guiState
-            let ls = state.Ls
-            let totSizeStr = state.TotSizeStr
-            filterSortEntries ls (FsController.IsFolder fsEntries) |> Seq.iter printFun
-            filterSortEntries ls (FsController.IsFile fsEntries) |> Seq.iter printFun
-            printfn "%s\n%s" (String.replicate 12 "-") totSizeStr
+            let state = List.head state
+            getEntries state.Ls fsEntries
+            |> Array.iter (fun x ->
+                printf "%s\n" x)
+            printfn "%s\n%s" (String.replicate 12 "-") state.TotSizeStr
 
-            eprintfn "Execution time: %f" stopWatch.Elapsed.TotalMilliseconds
+            eprintfn "Execution time: %fms" stopWatch.Elapsed.TotalMilliseconds
         else
             Application.Init()
 
             Application.MainLoop.Invoke(fun () ->
-                let currState = List.head(guiState)
+                let currState = List.head (state)
                 Gui.LstView.SetSource currState.LstData
                 Gui.LblPath.Text <- ustr currState.CurrPath
                 Gui.LblTotSize.Text <- ustr currState.TotSizeStr)
