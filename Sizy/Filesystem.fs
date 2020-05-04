@@ -43,10 +43,10 @@ type FsController(fs: IFileSystem) =
                 0L
 
     member this.GetEntryName (path:string) (isDir:bool) =
-        Array.last (path.Split this.DirectorySeparator) + if isDir then string this.DirectorySeparator else ""
+        Array.last (path.Split this.DirSeparator) + if isDir then string this.DirSeparator else ""
 
     member this.Delete(path:string) =
-        if path.EndsWith this.DirectorySeparator then
+        if path.EndsWith this.DirSeparator then
             fs.Directory.Delete(path, true)
         else
             fs.File.Delete(path)
@@ -54,9 +54,9 @@ type FsController(fs: IFileSystem) =
     member _.List(path: string) = 
         fs.Directory.EnumerateFileSystemEntries path
 
-    member _.DirectorySeparator : char = fs.Path.DirectorySeparatorChar
+    member _.DirSeparator : char = fs.Path.DirectorySeparatorChar
 
-    member _.GetCurrentDirectory = fs.Directory.GetCurrentDirectory
+    member _.GetCurrDir = fs.Directory.GetCurrentDirectory
 
     static member GetSizeUnit bytes =
         if bytes <= 0L then
@@ -89,10 +89,10 @@ type FsController(fs: IFileSystem) =
         fsEntries.ContainsKey path && 
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> isDir
-            | Error e -> ErrorIsDir
+            | Error _ -> ErrorIsDir
 
     static member IsFile (fsEntries: IDictionary<string, Entry>) (path: string) =
         fsEntries.ContainsKey path && 
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> not isDir
-            | Error e -> not ErrorIsDir
+            | Error _ -> not ErrorIsDir
