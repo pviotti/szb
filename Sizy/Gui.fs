@@ -44,17 +44,19 @@ let getTotalSizeStr totSize =
 
 let getEntries (ls: seq<string>) (fsEntries: ConcurrentDictionary<string, Entry>) =
 
+    let lsSet = Set.ofSeq ls
+
     let filterDirsInLs (KeyValue(path: string, value: Entry)) =
+        Set.contains path lsSet && 
         match value with
         | FsEntry fsEntry -> fsEntry.IsDir
         | Error _ -> ErrorIsDir
-        && Seq.contains path ls
 
     let filterFilesInLs (KeyValue(path: string, value: Entry)) =
+        Set.contains path lsSet && 
         match value with
         | FsEntry fsEntry -> not fsEntry.IsDir
         | Error _ -> not ErrorIsDir
-        && Seq.contains path ls
 
     let sortBySize (KeyValue(_: string, value: Entry)) =
         match value with
@@ -166,16 +168,16 @@ let main argv =
         let path =
             if config.Contains Input then config.GetResult Input else fs.GetCurrDir()
 
+        let stopWatch = Diagnostics.Stopwatch.StartNew()
         addState path fsEntries state
         if config.Contains Print_Only then
-            let stopWatch = Diagnostics.Stopwatch.StartNew()
-
             let state = List.head state
             getEntries state.Ls fsEntries
             |> Array.iter (fun x ->
                 printf "%s\n" x)
             printfn "%s\n%s" (String.replicate 12 "-") state.TotSizeStr
 
+            stopWatch.Stop()
             eprintfn "Execution time: %fms" stopWatch.Elapsed.TotalMilliseconds
         else
             Application.Init()
