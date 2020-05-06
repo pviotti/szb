@@ -47,16 +47,14 @@ let getEntries (ls: seq<string>) (fsEntries: ConcurrentDictionary<string, Entry>
     let lsSet = Set.ofSeq ls
 
     let filterDirsInLs (KeyValue(path: string, value: Entry)) =
-        Set.contains path lsSet && 
-        match value with
-        | FsEntry fsEntry -> fsEntry.IsDir
-        | Error _ -> ErrorIsDir
+        Set.contains path lsSet && match value with
+                                   | FsEntry fsEntry -> fsEntry.IsDir
+                                   | Error _ -> ErrorIsDir
 
     let filterFilesInLs (KeyValue(path: string, value: Entry)) =
-        Set.contains path lsSet && 
-        match value with
-        | FsEntry fsEntry -> not fsEntry.IsDir
-        | Error _ -> not ErrorIsDir
+        Set.contains path lsSet && match value with
+                                   | FsEntry fsEntry -> not fsEntry.IsDir
+                                   | Error _ -> not ErrorIsDir
 
     let sortBySize (KeyValue(_: string, value: Entry)) =
         match value with
@@ -126,38 +124,41 @@ module Gui =
 
                 let updateViews() =
                     Application.MainLoop.Invoke(fun () ->
-                        let currState = List.head (state)
+                        let currState = List.head state
                         this.SetSource currState.LstData
                         LblPath.Text <- ustr currState.CurrPath
                         LblTotSize.Text <- ustr currState.TotSizeStr)
 
-                let currState = List.head (state)
-                let entryName =
-                    currState.LstData.[this.SelectedItem]
-                        .Substring(13) // TODO fix IndexOutOfRangeException when list is empty
-                if (k.Key = Key.CursorRight || k.KeyValue = int 'l') && entryName.EndsWith fs.DirSeparator then
-                    let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                    addState newDir fsEntries state
-                    updateViews()
+                let currState = List.head state
+                let keyChar: char = char k.KeyValue
+                match k.Key, keyChar with
+                | Key.CursorRight, _
+                | _, 'l' when not (Seq.isEmpty currState.LstData) ->
+                    let entryName = currState.LstData.[this.SelectedItem].Substring(13)
+                    if entryName.EndsWith fs.DirSeparator then
+                        let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+                        addState newDir fsEntries state
+                        updateViews()
                     true
-                elif (k.Key = Key.CursorLeft || k.KeyValue = int 'h') && List.length state > 1 then
-                    state <- List.tail state
-                    updateViews()
+                | Key.CursorLeft, _
+                | _, 'h' ->
+                    if List.length state > 1 then
+                        state <- List.tail state
+                        updateViews()
                     true
-                elif k.KeyValue = int 'd' || k.Key = Key.DeleteChar then
+                | Key.DeleteChar, _
+                | _, 'd' when not (Seq.isEmpty currState.LstData) ->
                     if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                        let entryName = currState.LstData.[this.SelectedItem].Substring(13)
                         let entryToDelete =
                             currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
                         fs.Delete entryToDelete
                         updateCurrentState currState.CurrPath fsEntries
                         updateViews()
                     true
-                elif k.KeyValue = int 'j' then
-                    this.MoveDown()
-                elif k.KeyValue = int 'k' then
-                    this.MoveUp()
-                else
-                    base.ProcessKey k }
+                | _, 'j' -> this.MoveDown()
+                | _, 'k' -> this.MoveUp()
+                | _, _ -> base.ProcessKey k }
 
 #endregion
 
