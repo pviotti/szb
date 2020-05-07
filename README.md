@@ -13,7 +13,7 @@ contribute. :nerd_face:
 
 ## Usage
 
-![screenshot](https://user-images.githubusercontent.com/1350095/80761044-bd12b680-8b31-11ea-991d-fd54a8ed77fe.png)
+![screenshot](https://user-images.githubusercontent.com/1350095/81344889-7e3fac00-90af-11ea-8ea8-62a27a085e66.png)
 
 To only print the result for the input folder, you can use the `-p` flag.
 
