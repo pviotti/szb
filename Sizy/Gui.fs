@@ -63,21 +63,14 @@ let getEntries (ls: seq<string>) (fsEntries: ConcurrentDictionary<string, Entry>
 
     let valueEntryToString (KeyValue(_: string, value: Entry)) = FsController.GetEntryString value
 
-    let orderedDirs =
+    let getOrderedEntries filterFunction =
         fsEntries
-        |> PSeq.filter filterDirsInLs
+        |> PSeq.filter filterFunction
         |> PSeq.sortBy sortBySize
         |> PSeq.map valueEntryToString
         |> PSeq.toArray
 
-    let orderedFiles =
-        fsEntries
-        |> PSeq.filter filterFilesInLs
-        |> PSeq.sortBy sortBySize
-        |> PSeq.map valueEntryToString
-        |> PSeq.toArray
-
-    Array.append orderedDirs orderedFiles
+    Array.append (getOrderedEntries filterDirsInLs) (getOrderedEntries filterFilesInLs)
 
 let addState path entries stateNewTail =
     let ls = fs.List path
