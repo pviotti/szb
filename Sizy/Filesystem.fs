@@ -40,7 +40,7 @@ type FsController(fs: IFileSystem) =
                 size
             with ex ->
                 fsEntries.[path] <- Error {Name=path; Message=ex.Message}
-                0L
+                ErrorSize
 
     member this.GetEntryName (path:string) (isDir:bool) =
         Array.last (path.Split this.DirSeparator) + if isDir then string this.DirSeparator else ""
