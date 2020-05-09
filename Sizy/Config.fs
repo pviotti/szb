@@ -14,9 +14,9 @@ type Args =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Version _ -> sprintf "print %s version." PROGRAM_NAME
-            | Input _ -> "the folder you want to analyse (default: current folder)."
-            | Print_Only _ -> "output the results to screen and exit."
+            | Version _ -> sprintf "print %s version" PROGRAM_NAME
+            | Input _ -> "the directory to analyse (default: current directory)"
+            | Print_Only _ -> "output the results to screen and exit"
 
 type ConfigOrInt =
     | Config of Argu.ParseResults<Args>
