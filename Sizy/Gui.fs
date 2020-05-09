@@ -82,7 +82,7 @@ type StateManager() =
     member this.IsSelectedItemDir selectedItemIdx =
         let currState = this.CurrentState
         let path = getPath currState selectedItemIdx
-        FsManager.IsFolder fsEntries path
+        FsManager.IsDir fsEntries path
 
     member this.CreateState path =
         let ls = fs.List path

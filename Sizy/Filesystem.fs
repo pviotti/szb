@@ -46,7 +46,7 @@ type FsManager(fs: IFileSystem) =
         Array.last (path.Split this.DirSeparator) + if isDir then string this.DirSeparator else ""
 
     member _.Delete (fsEntries: IDictionary<string, Entry>) path  =
-        if FsManager.IsFolder fsEntries path then
+        if FsManager.IsDir fsEntries path then
             fs.Directory.Delete(path, true)
         else
             fs.File.Delete(path)
@@ -85,7 +85,7 @@ type FsManager(fs: IFileSystem) =
             let newSize, sizeUnit = FsManager.GetSizeUnit ErrorSize
             sprintf "%10.0f %-1s %s \tError: %s" newSize sizeUnit name msg
 
-    static member IsFolder (fsEntries: IDictionary<string, Entry>) (path: string) =
+    static member IsDir (fsEntries: IDictionary<string, Entry>) (path: string) =
         fsEntries.ContainsKey path && 
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> isDir
