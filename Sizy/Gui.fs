@@ -217,13 +217,17 @@ let main argv =
             if config.Contains Input then config.GetResult Input else fs.GetCurrDir()
 
         let state = StateManager()
-        state.AddNewState path
-        if config.Contains Print_Only then
-            state.GetListViewEntries state.CurrentState.Ls
-            |> Array.iter (fun x ->
-                printf "%s\n" x)
-            printfn "%s\n%s" (String.replicate 12 "-") state.CurrentState.TotSizeStr
-        else
-            Tui(state) |> ignore
-        0
+        try
+            state.AddNewState path
+            if config.Contains Print_Only then
+                state.GetListViewEntries state.CurrentState.Ls
+                |> Array.iter (fun x ->
+                    printf "%s\n" x)
+                printfn "%s\n%s" (String.replicate 12 "-") state.CurrentState.TotSizeStr
+            else
+                Tui(state) |> ignore
+            0
+        with ex -> 
+            eprintfn "Error: %s" ex.Message
+            1
     | ReturnVal ret -> ret
