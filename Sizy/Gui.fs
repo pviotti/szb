@@ -3,7 +3,6 @@ module Sizy.Gui
 open Terminal.Gui
 open NStack
 
-open System
 open Sizy.Filesystem
 open Sizy.Config
 open System.IO.Abstractions
@@ -29,7 +28,7 @@ type TuiStateEntry =
 
 let fs = FsManager(FileSystem())
 
-type State() =
+type StateManager() =
     (* Mutable state:
         - a stack (list) of TuiStateEntry containing the data to visualise in the TUI for each browsed path
         - a hashmap of path -> Entry holding the file system data for all file system entries *)
@@ -105,31 +104,29 @@ type State() =
         state <- newState :: newTail
 
 
-type Tui(stateArg: State) =
-    let state = stateArg
-
-    let _windowProcessKey (k: KeyEvent): bool =
-        if k.KeyValue = int 'q' then
-            Application.Top.Running <- false
-            true
-        elif k.KeyValue = int '?' then
-            MessageBox.Query(72, 14, "Help", helpMsg, "OK") |> ignore
-            true
-        else
-            false
+type Tui(state: StateManager) =
+    let state = state
 
     let window =
         { new Window(ustr PROGRAM_NAME, X = Pos.op_Implicit (0), Y = Pos.op_Implicit (0), Width = Dim.Fill(),
                      Height = Dim.Fill()) with
-            member __.ProcessKey(k: KeyEvent) = _windowProcessKey (k) || base.ProcessKey k }
+            member __.ProcessKey(k: KeyEvent) =
+                if k.KeyValue = int 'q' then
+                    Application.Top.Running <- false
+                    true
+                elif k.KeyValue = int '?' then
+                    MessageBox.Query(72, 14, "Help", helpMsg, "OK") |> ignore
+                    true
+                else
+                    base.ProcessKey k }
 
     let lblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
 
     let lblTotSize =
-        Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
+        Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(10.0f), Height = Dim.Sized(1))
 
     let lblError =
-        Label(ustr "", X = Pos.Percent(50.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
+        Label(ustr "", X = Pos.Percent(20.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(80.0f), Height = Dim.Sized(1))
 
     let lstView =
         { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
@@ -144,35 +141,39 @@ type Tui(stateArg: State) =
 
                 let currState = state.CurrentState
                 let keyChar: char = char k.KeyValue
-                match k.Key, keyChar with
-                | Key.CursorRight, _
-                | _, 'l' when not (Seq.isEmpty currState.LstData) ->
-                    let entryName = currState.LstData.[this.SelectedItem].Substring(13)
-                    if entryName.EndsWith fs.DirSeparator then
-                        let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                        state.AddNewState newDir
-                        updateViews()
-                    true
-                | Key.CursorLeft, _
-                | _, 'h' ->
-                    if state.Length > 1 then
-                        state.RemoveCurrentState()
-                        updateViews()
-                    true
-                | Key.DeleteChar, _
-                | _, 'd' when not (Seq.isEmpty currState.LstData) ->
-                    if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                try
+                    match k.Key, keyChar with
+                    | Key.CursorRight, _
+                    | _, 'l' when not (Seq.isEmpty currState.LstData) ->
                         let entryName = currState.LstData.[this.SelectedItem].Substring(13)
-                        let entryToDelete =
-                            currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                        fs.Delete entryToDelete
-                        state.UpdateStatesAfterDelete entryToDelete currState.CurrPath
-                        updateViews()
-                    // TODO restore cursor position
-                    true
-                | _, 'j' -> this.MoveDown()
-                | _, 'k' -> this.MoveUp()
-                | _, _ -> base.ProcessKey k }
+                        if entryName.EndsWith fs.DirSeparator then
+                            let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+                            state.AddNewState newDir
+                            updateViews()
+                        true
+                    | Key.CursorLeft, _
+                    | _, 'h' ->
+                        if state.Length > 1 then
+                            state.RemoveCurrentState()
+                            updateViews()
+                        true
+                    | Key.DeleteChar, _
+                    | _, 'd' when not (Seq.isEmpty currState.LstData) ->
+                        if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                            let entryName = currState.LstData.[this.SelectedItem].Substring(13)
+                            let entryToDelete =
+                                currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+                            fs.Delete entryToDelete
+                            state.UpdateStatesAfterDelete entryToDelete currState.CurrPath
+                            updateViews()
+                        // TODO restore cursor position
+                        true
+                    | _, 'j' -> this.MoveDown()
+                    | _, 'k' -> this.MoveUp()
+                    | _, _ -> base.ProcessKey k
+                with ex ->
+                    lblError.Text <- ustr ("Error: " + ex.Message)
+                    true }
 
     do
         Application.Init()
@@ -198,7 +199,7 @@ let main argv =
         let path =
             if config.Contains Input then config.GetResult Input else fs.GetCurrDir()
 
-        let state = State()
+        let state = StateManager()
         state.AddNewState path
         if config.Contains Print_Only then
             state.GetListViewEntries state.CurrentState.Ls
