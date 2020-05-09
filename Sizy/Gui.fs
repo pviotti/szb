@@ -20,122 +20,129 @@ let helpMsg = "\n- → or l:         browse into a directory\n\
                  - q:              exit\n\
                  - ?:              show this help message."
 
-#region "Data and related functions"
 
-type GuiStateEntry =
+type TuiStateEntry =
     { CurrPath: string
       LstData: string []
       TotSizeStr: string
       Ls: string seq }
 
-type GuiState = GuiStateEntry list
+let fs = FsManager(FileSystem())
 
-// Mutable state:
-// - a stack (list) of GuiStateEntry
-// - a hashmap of path -> Entry
-let mutable state: GuiState = []
-let fsEntries = ConcurrentDictionary<string, Entry>()
+type State() =
+    (* Mutable state:
+        - a stack (list) of TuiStateEntry containing the data to visualise in the TUI for each browsed path
+        - a hashmap of path -> Entry holding the file system data for all file system entries *)
+    let mutable state: TuiStateEntry list = []
+    let fsEntries = ConcurrentDictionary<string, Entry>()
 
-let fs = FsController(FileSystem())
+    let getTotalSizeStr totSize =
+        let totSize, totSizeUnit = FsManager.GetSizeUnit totSize
+        sprintf "Tot. %5.0f %s" totSize totSizeUnit
 
-let getTotalSizeStr totSize =
-    let totSize, totSizeUnit = FsController.GetSizeUnit totSize
-    sprintf "Tot. %5.0f %s" totSize totSizeUnit
+    member _.GetListViewEntries(ls: seq<string>) =
 
-let getEntries (ls: seq<string>) (fsEntries: ConcurrentDictionary<string, Entry>) =
+        let lsSet = Set.ofSeq ls
 
-    let lsSet = Set.ofSeq ls
+        let filterDirsInLs (KeyValue(path: string, value: Entry)) =
+            Set.contains path lsSet && match value with
+                                       | FsEntry fsEntry -> fsEntry.IsDir
+                                       | Error _ -> ErrorIsDir
 
-    let filterDirsInLs (KeyValue(path: string, value: Entry)) =
-        Set.contains path lsSet && match value with
-                                   | FsEntry fsEntry -> fsEntry.IsDir
-                                   | Error _ -> ErrorIsDir
+        let filterFilesInLs (KeyValue(path: string, value: Entry)) =
+            Set.contains path lsSet && match value with
+                                       | FsEntry fsEntry -> not fsEntry.IsDir
+                                       | Error _ -> not ErrorIsDir
 
-    let filterFilesInLs (KeyValue(path: string, value: Entry)) =
-        Set.contains path lsSet && match value with
-                                   | FsEntry fsEntry -> not fsEntry.IsDir
-                                   | Error _ -> not ErrorIsDir
+        let sortBySize (KeyValue(_: string, value: Entry)) =
+            match value with
+            | FsEntry fsEntry -> -fsEntry.Size
+            | Error _ -> ErrorSize
 
-    let sortBySize (KeyValue(_: string, value: Entry)) =
-        match value with
-        | FsEntry fsEntry -> -fsEntry.Size
-        | Error _ -> ErrorSize
+        let valueEntryToString (KeyValue(_: string, value: Entry)) = FsManager.GetEntryString value
 
-    let valueEntryToString (KeyValue(_: string, value: Entry)) = FsController.GetEntryString value
+        let getOrderedEntries filterFunction =
+            fsEntries
+            |> PSeq.filter filterFunction
+            |> PSeq.sortBy sortBySize
+            |> PSeq.map valueEntryToString
+            |> PSeq.toArray
 
-    let getOrderedEntries filterFunction =
-        fsEntries
-        |> PSeq.filter filterFunction
-        |> PSeq.sortBy sortBySize
-        |> PSeq.map valueEntryToString
-        |> PSeq.toArray
+        Array.append (getOrderedEntries filterDirsInLs) (getOrderedEntries filterFilesInLs)
 
-    Array.append (getOrderedEntries filterDirsInLs) (getOrderedEntries filterFilesInLs)
+    member _.CurrentState = List.head state
 
-let addState path entries stateNewTail =
-    let ls = fs.List path
-    let sizes = PSeq.map (fs.GetSize entries) ls
-    let totSizeStr = getTotalSizeStr (PSeq.sum sizes)
-    let lstData = getEntries ls entries
-    state <-
+    member _.Length = List.length state
+
+    member _.RemoveCurrentState() = state <- state.Tail
+
+    member this.CreateState path =
+        let ls = fs.List path
+        let sizes = PSeq.map (fs.GetSize fsEntries) ls
+        let totSizeStr = getTotalSizeStr (PSeq.sum sizes)
+        let lstData = this.GetListViewEntries ls
         { CurrPath = path
           LstData = lstData
           TotSizeStr = totSizeStr
           Ls = ls }
-        :: stateNewTail
 
-let updateStatesAfterDelete entryToDelete currentPath (entries: ConcurrentDictionary<_, _>) =
-    // TODO make update of ancestor dir async
-    let updateState oldState : GuiStateEntry = 
-        entries.TryRemove oldState.CurrPath |> ignore
-        let ls = fs.List oldState.CurrPath
-        let sizes = PSeq.map (fs.GetSize entries) ls
-        let totSizeStr = getTotalSizeStr (PSeq.sum sizes)
-        let lstData = getEntries ls entries
-        { oldState with LstData = lstData; TotSizeStr = totSizeStr }
+    member this.AddNewState newPath =
+        let newState = this.CreateState newPath
+        state <- newState :: state
 
-    fsEntries.TryRemove entryToDelete |> ignore
-    fsEntries.TryRemove (List.head(state)).CurrPath |> ignore
-    let newTail = List.tail state |> List.map updateState
-    addState currentPath entries newTail
+    member this.UpdateStatesAfterDelete deletedEntry currentPath =
+        (* Delete current path, deleted entry and its ancestor paths
+            from fsEntry dictionary so that their sizes are recomputed
+            in fs.GetSize *)
+        let updateState oldStateEntry: TuiStateEntry =
+            fsEntries.TryRemove oldStateEntry.CurrPath |> ignore
+            this.CreateState oldStateEntry.CurrPath
 
-#endregion
+        fsEntries.TryRemove deletedEntry |> ignore
+        fsEntries.TryRemove this.CurrentState.CurrPath |> ignore
+        let newTail = List.tail state |> List.map updateState
+        let newState = this.CreateState currentPath
+        state <- newState :: newTail
 
-#region "UI components"
 
-module Gui =
+type Tui(stateArg: State) =
+    let state = stateArg
 
-    let Window =
+    let _windowProcessKey (k: KeyEvent): bool =
+        if k.KeyValue = int 'q' then
+            Application.Top.Running <- false
+            true
+        elif k.KeyValue = int '?' then
+            MessageBox.Query(72, 14, "Help", helpMsg, "OK") |> ignore
+            true
+        else
+            false
+
+    let window =
         { new Window(ustr PROGRAM_NAME, X = Pos.op_Implicit (0), Y = Pos.op_Implicit (0), Width = Dim.Fill(),
                      Height = Dim.Fill()) with
-            member __.ProcessKey(k: KeyEvent) =
-                if k.KeyValue = int 'q' then
-                    Application.Top.Running <- false
-                    true
-                elif k.KeyValue = int '?' then
-                    MessageBox.Query(72, 14, "Help", helpMsg, "OK") |> ignore
-                    true
-                else
-                    base.ProcessKey k }
+            member __.ProcessKey(k: KeyEvent) = _windowProcessKey (k) || base.ProcessKey k }
 
-    let LblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
+    let lblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
 
-    let LblTotSize = Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
+    let lblTotSize =
+        Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
 
-    let LblError = Label(ustr "", X = Pos.Percent(50.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
+    let lblError =
+        Label(ustr "", X = Pos.Percent(50.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
 
-    let LstView =
+    let lstView =
         { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
             member this.ProcessKey(k: KeyEvent) =
 
+                // TODO this function is duplicate and shouldn't be here
                 let updateViews() =
                     Application.MainLoop.Invoke(fun () ->
-                        let currState = List.head state
-                        this.SetSource currState.LstData
-                        LblPath.Text <- ustr currState.CurrPath
-                        LblTotSize.Text <- ustr currState.TotSizeStr)
+                        this.SetSource state.CurrentState.LstData
+                        lblPath.Text <- ustr state.CurrentState.CurrPath
+                        lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
 
-                let currState = List.head state
+                let currState = state.CurrentState
                 let keyChar: char = char k.KeyValue
                 match k.Key, keyChar with
                 | Key.CursorRight, _
@@ -143,13 +150,13 @@ module Gui =
                     let entryName = currState.LstData.[this.SelectedItem].Substring(13)
                     if entryName.EndsWith fs.DirSeparator then
                         let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                        addState newDir fsEntries state
+                        state.AddNewState newDir
                         updateViews()
                     true
                 | Key.CursorLeft, _
                 | _, 'h' ->
-                    if List.length state > 1 then
-                        state <- List.tail state
+                    if state.Length > 1 then
+                        state.RemoveCurrentState()
                         updateViews()
                     true
                 | Key.DeleteChar, _
@@ -159,15 +166,30 @@ module Gui =
                         let entryToDelete =
                             currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
                         fs.Delete entryToDelete
-                        updateStatesAfterDelete entryToDelete currState.CurrPath fsEntries
+                        state.UpdateStatesAfterDelete entryToDelete currState.CurrPath
                         updateViews()
-                        // TODO restore cursor position
+                    // TODO restore cursor position
                     true
                 | _, 'j' -> this.MoveDown()
                 | _, 'k' -> this.MoveUp()
                 | _, _ -> base.ProcessKey k }
 
-#endregion
+    do
+        Application.Init()
+
+        Application.MainLoop.Invoke(fun () ->
+            lstView.SetSource state.CurrentState.LstData
+            lblPath.Text <- ustr state.CurrentState.CurrPath
+            lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
+
+        lblError.TextColor <- Application.Driver.MakeAttribute(Color.Red, Color.Blue)
+        window.Add(lblPath)
+        window.Add(lstView)
+        window.Add(lblTotSize)
+        window.Add(lblError)
+        Application.Top.Add(window)
+        Application.Run()
+
 
 [<EntryPoint>]
 let main argv =
@@ -176,33 +198,14 @@ let main argv =
         let path =
             if config.Contains Input then config.GetResult Input else fs.GetCurrDir()
 
-        let stopWatch = Diagnostics.Stopwatch.StartNew()
-        addState path fsEntries state
+        let state = State()
+        state.AddNewState path
         if config.Contains Print_Only then
-            let state = List.head state
-            getEntries state.Ls fsEntries
+            state.GetListViewEntries state.CurrentState.Ls
             |> Array.iter (fun x ->
                 printf "%s\n" x)
-            printfn "%s\n%s" (String.replicate 12 "-") state.TotSizeStr
-
-            stopWatch.Stop()
-            eprintfn "Execution time: %fms" stopWatch.Elapsed.TotalMilliseconds
+            printfn "%s\n%s" (String.replicate 12 "-") state.CurrentState.TotSizeStr
         else
-            Application.Init()
-
-            Application.MainLoop.Invoke(fun () ->
-                let currState = List.head (state)
-                Gui.LstView.SetSource currState.LstData
-                Gui.LblPath.Text <- ustr currState.CurrPath
-                Gui.LblTotSize.Text <- ustr currState.TotSizeStr)
-
-            let lblErrorColor = Application.Driver.MakeAttribute (Color.Red, Color.Blue)
-            Gui.LblError.TextColor <- lblErrorColor 
-            Gui.Window.Add(Gui.LblPath)
-            Gui.Window.Add(Gui.LstView)
-            Gui.Window.Add(Gui.LblTotSize)
-            Gui.Window.Add(Gui.LblError)
-            Application.Top.Add(Gui.Window)
-            Application.Run()
+            Tui(state) |> ignore
         0
     | ReturnVal ret -> ret

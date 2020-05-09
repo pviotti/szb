@@ -21,7 +21,7 @@ let ErrorSize = 0L
 
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
-type FsController(fs: IFileSystem) = 
+type FsManager(fs: IFileSystem) = 
     let fs = fs
 
     member this.GetSize (fsEntries: IDictionary<string, Entry>) path =
@@ -79,10 +79,10 @@ type FsController(fs: IFileSystem) =
     static member GetEntryString (entry:Entry) : string=
         match entry with
         | FsEntry {Name=name; Size=size; IsDir=_} ->
-            let newSize, sizeUnit = FsController.GetSizeUnit size
+            let newSize, sizeUnit = FsManager.GetSizeUnit size
             sprintf "%10.0f %-1s %s" newSize sizeUnit name
         | Error {Name=name; Message=msg} ->
-            let newSize, sizeUnit = FsController.GetSizeUnit ErrorSize
+            let newSize, sizeUnit = FsManager.GetSizeUnit ErrorSize
             sprintf "%10.0f %-1s %s \tError: %s" newSize sizeUnit name msg
 
     static member IsFolder (fsEntries: IDictionary<string, Entry>) (path: string) =
