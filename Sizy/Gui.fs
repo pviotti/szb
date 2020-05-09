@@ -158,12 +158,11 @@ type Tui(state: StateManager) =
                         lblPath.Text <- ustr state.CurrentState.CurrPath
                         lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
 
-                let currState = state.CurrentState
                 let keyChar: char = char k.KeyValue
                 try
                     match k.Key, keyChar with
                     | Key.CursorRight, _
-                    | _, 'l' when not (Seq.isEmpty currState.LstData) ->
+                    | _, 'l' when this.Source.Count <> 0 ->
                         if state.IsSelectedItemDir this.SelectedItem then
                             state.AddNewState this.SelectedItem
                             updateViews()
@@ -175,11 +174,16 @@ type Tui(state: StateManager) =
                             updateViews()
                         true
                     | Key.DeleteChar, _
-                    | _, 'd' when not (Seq.isEmpty currState.LstData) ->
+                    | _, 'd' when this.Source.Count <> 0 ->
                         if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
                             state.DeleteEntry this.SelectedItem
-                            updateViews()
-                        // TODO restore cursor position
+                            Application.MainLoop.Invoke(fun () ->
+                                let prevSelectedItem = this.SelectedItem
+                                this.SetSource state.CurrentState.LstData
+                                if this.Source.Count <> 0 && prevSelectedItem > 0 then
+                                    this.SelectedItem <- prevSelectedItem - 1
+                                lblPath.Text <- ustr state.CurrentState.CurrPath
+                                lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
                         true
                     | _, 'j' -> this.MoveDown()
                     | _, 'k' -> this.MoveUp()
