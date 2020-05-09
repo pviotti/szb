@@ -84,9 +84,20 @@ let addState path entries stateNewTail =
           Ls = ls }
         :: stateNewTail
 
-let updateCurrentState path entries =
-    // TODO update size count of all ancestor directories
-    addState path entries (List.tail state)
+let updateStatesAfterDelete entryToDelete currentPath (entries: ConcurrentDictionary<_, _>) =
+    // TODO make update of ancestor dir async
+    let updateState oldState : GuiStateEntry = 
+        entries.TryRemove oldState.CurrPath |> ignore
+        let ls = fs.List oldState.CurrPath
+        let sizes = PSeq.map (fs.GetSize entries) ls
+        let totSizeStr = getTotalSizeStr (PSeq.sum sizes)
+        let lstData = getEntries ls entries
+        { oldState with LstData = lstData; TotSizeStr = totSizeStr }
+
+    fsEntries.TryRemove entryToDelete |> ignore
+    fsEntries.TryRemove (List.head(state)).CurrPath |> ignore
+    let newTail = List.tail state |> List.map updateState
+    addState currentPath entries newTail
 
 #endregion
 
@@ -148,8 +159,9 @@ module Gui =
                         let entryToDelete =
                             currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
                         fs.Delete entryToDelete
-                        updateCurrentState currState.CurrPath fsEntries
+                        updateStatesAfterDelete entryToDelete currState.CurrPath fsEntries
                         updateViews()
+                        // TODO restore cursor position
                     true
                 | _, 'j' -> this.MoveDown()
                 | _, 'k' -> this.MoveUp()
