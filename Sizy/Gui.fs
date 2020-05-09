@@ -89,7 +89,12 @@ type StateManager() =
         let newState = this.CreateState newPath
         state <- newState :: state
 
-    member this.DeleteAndUpdateStates entryToDelete currentPath =
+    member this.DeleteEntryAndUpdateStates selectedItemIdx =
+        let currState = this.CurrentState
+        let entryName = currState.LstData.[selectedItemIdx].Substring(13)
+        let pathToDelete = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+        fs.Delete fsEntries pathToDelete
+
         (* Delete current path, deleted entry and its ancestor paths
             from fsEntry dictionary so that their sizes are recomputed
             in fs.GetSize *)
@@ -97,11 +102,11 @@ type StateManager() =
             fsEntries.TryRemove oldStateEntry.CurrPath |> ignore
             this.CreateState oldStateEntry.CurrPath
 
-        fs.Delete fsEntries entryToDelete
-        fsEntries.TryRemove entryToDelete |> ignore
-        fsEntries.TryRemove this.CurrentState.CurrPath |> ignore
+        fsEntries.TryRemove pathToDelete |> ignore
+        fsEntries.TryRemove currState.CurrPath |> ignore
         let newTail = List.tail state |> List.map updateState
-        let newState = this.CreateState currentPath
+
+        let newState = this.CreateState currState.CurrPath
         state <- newState :: newTail
 
 
@@ -162,12 +167,9 @@ type Tui(state: StateManager) =
                     | Key.DeleteChar, _
                     | _, 'd' when not (Seq.isEmpty currState.LstData) ->
                         if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
-                            let entryName = currState.LstData.[this.SelectedItem].Substring(13)
-                            let entryToDelete =
-                                currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                            state.DeleteAndUpdateStates entryToDelete currState.CurrPath
+                            state.DeleteEntryAndUpdateStates this.SelectedItem
                             updateViews()
-                        // TODO restore cursor position
+                            // TODO restore cursor position
                         true
                     | _, 'j' -> this.MoveDown()
                     | _, 'k' -> this.MoveUp()
