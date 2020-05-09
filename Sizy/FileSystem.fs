@@ -1,4 +1,4 @@
-module Sizy.Filesystem
+module Sizy.FileSystem
 
 open System
 open System.IO

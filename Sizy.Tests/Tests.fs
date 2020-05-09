@@ -10,7 +10,7 @@ open FsUnit.Xunit
 
 open FSharp.Collections.ParallelSeq
 
-open Sizy.Filesystem
+open Sizy.FileSystem
 
 module ``Sizy Test`` =
 

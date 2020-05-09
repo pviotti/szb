@@ -3,7 +3,7 @@ module Sizy.Gui
 open Terminal.Gui
 open NStack
 
-open Sizy.Filesystem
+open Sizy.FileSystem
 open Sizy.Config
 open System.IO.Abstractions
 open System.Collections.Concurrent

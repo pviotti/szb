@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Config.fs" />
-    <Compile Include="Filesystem.fs" />
+    <Compile Include="FileSystem.fs" />
     <Compile Include="Gui.fs" />
   </ItemGroup>
 
