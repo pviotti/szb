@@ -39,6 +39,10 @@ type StateManager() =
         let totSize, totSizeUnit = FsManager.GetSizeUnit totSize
         sprintf "Tot. %5.0f %s" totSize totSizeUnit
 
+    let getPath state idx =
+        let name = state.LstData.[idx].Substring(13)
+        state.CurrPath + string fs.DirSeparator + name.TrimEnd(fs.DirSeparator)
+
     member _.GetListViewEntries(ls: seq<string>) =
 
         let lsSet = Set.ofSeq ls
@@ -75,6 +79,11 @@ type StateManager() =
 
     member _.RemoveCurrentState() = state <- state.Tail
 
+    member this.IsSelectedItemDir selectedItemIdx =
+        let currState = this.CurrentState
+        let path = getPath currState selectedItemIdx
+        FsManager.IsFolder fsEntries path
+
     member this.CreateState path =
         let ls = fs.List path
         let sizes = PSeq.map (fs.GetSize fsEntries) ls
@@ -85,14 +94,18 @@ type StateManager() =
           TotSizeStr = totSizeStr
           Ls = ls }
 
-    member this.AddNewState newPath =
-        let newState = this.CreateState newPath
+    member this.AddNewState(path: string) =
+        let newState = this.CreateState path
         state <- newState :: state
 
-    member this.DeleteEntryAndUpdateStates selectedItemIdx =
+    member this.AddNewState(selectedItemIdx: int) =
         let currState = this.CurrentState
-        let entryName = currState.LstData.[selectedItemIdx].Substring(13)
-        let pathToDelete = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+        let path = getPath currState selectedItemIdx
+        this.AddNewState path
+
+    member this.DeleteEntry selectedItemIdx =
+        let currState = this.CurrentState
+        let pathToDelete = getPath currState selectedItemIdx
         fs.Delete fsEntries pathToDelete
 
         (* Delete current path, deleted entry and its ancestor paths
@@ -129,7 +142,7 @@ type Tui(state: StateManager) =
     let lblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
 
     let lblTotSize =
-        Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(10.0f), Height = Dim.Sized(1))
+        Label(ustr "Tot.", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(10.0f), Height = Dim.Sized(1))
 
     let lblError =
         Label(ustr "", X = Pos.Percent(20.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(80.0f), Height = Dim.Sized(1))
@@ -151,11 +164,8 @@ type Tui(state: StateManager) =
                     match k.Key, keyChar with
                     | Key.CursorRight, _
                     | _, 'l' when not (Seq.isEmpty currState.LstData) ->
-                        let entryName = currState.LstData.[this.SelectedItem].Substring(13)
-                        if entryName.EndsWith fs.DirSeparator then
-                            let newDir =
-                                currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                            state.AddNewState newDir
+                        if state.IsSelectedItemDir this.SelectedItem then
+                            state.AddNewState this.SelectedItem
                             updateViews()
                         true
                     | Key.CursorLeft, _
@@ -167,9 +177,9 @@ type Tui(state: StateManager) =
                     | Key.DeleteChar, _
                     | _, 'd' when not (Seq.isEmpty currState.LstData) ->
                         if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
-                            state.DeleteEntryAndUpdateStates this.SelectedItem
+                            state.DeleteEntry this.SelectedItem
                             updateViews()
-                            // TODO restore cursor position
+                        // TODO restore cursor position
                         true
                     | _, 'j' -> this.MoveDown()
                     | _, 'k' -> this.MoveUp()
