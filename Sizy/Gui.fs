@@ -122,7 +122,7 @@ module Gui =
 
     let LblTotSize = Label(ustr "", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
 
-    let LblError = Label(ustr "error", X = Pos.Percent(50.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
+    let LblError = Label(ustr "", X = Pos.Percent(50.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(50.0f), Height = Dim.Sized(1))
 
     let LstView =
         { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
@@ -196,6 +196,8 @@ let main argv =
                 Gui.LblPath.Text <- ustr currState.CurrPath
                 Gui.LblTotSize.Text <- ustr currState.TotSizeStr)
 
+            let lblErrorColor = Application.Driver.MakeAttribute (Color.Red, Color.Blue)
+            Gui.LblError.TextColor <- lblErrorColor 
             Gui.Window.Add(Gui.LblPath)
             Gui.Window.Add(Gui.LstView)
             Gui.Window.Add(Gui.LblTotSize)
