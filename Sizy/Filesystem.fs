@@ -45,8 +45,8 @@ type FsManager(fs: IFileSystem) =
     member this.GetEntryName (path:string) (isDir:bool) =
         Array.last (path.Split this.DirSeparator) + if isDir then string this.DirSeparator else ""
 
-    member this.Delete(path:string) =
-        if path.EndsWith this.DirSeparator then
+    member _.Delete (fsEntries: IDictionary<string, Entry>) path  =
+        if FsManager.IsFolder fsEntries path then
             fs.Directory.Delete(path, true)
         else
             fs.File.Delete(path)

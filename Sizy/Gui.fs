@@ -89,7 +89,7 @@ type StateManager() =
         let newState = this.CreateState newPath
         state <- newState :: state
 
-    member this.UpdateStatesAfterDelete deletedEntry currentPath =
+    member this.DeleteAndUpdateStates entryToDelete currentPath =
         (* Delete current path, deleted entry and its ancestor paths
             from fsEntry dictionary so that their sizes are recomputed
             in fs.GetSize *)
@@ -97,7 +97,8 @@ type StateManager() =
             fsEntries.TryRemove oldStateEntry.CurrPath |> ignore
             this.CreateState oldStateEntry.CurrPath
 
-        fsEntries.TryRemove deletedEntry |> ignore
+        fs.Delete fsEntries entryToDelete
+        fsEntries.TryRemove entryToDelete |> ignore
         fsEntries.TryRemove this.CurrentState.CurrPath |> ignore
         let newTail = List.tail state |> List.map updateState
         let newState = this.CreateState currentPath
@@ -147,7 +148,8 @@ type Tui(state: StateManager) =
                     | _, 'l' when not (Seq.isEmpty currState.LstData) ->
                         let entryName = currState.LstData.[this.SelectedItem].Substring(13)
                         if entryName.EndsWith fs.DirSeparator then
-                            let newDir = currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
+                            let newDir =
+                                currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
                             state.AddNewState newDir
                             updateViews()
                         true
@@ -163,8 +165,7 @@ type Tui(state: StateManager) =
                             let entryName = currState.LstData.[this.SelectedItem].Substring(13)
                             let entryToDelete =
                                 currState.CurrPath + string fs.DirSeparator + entryName.TrimEnd(fs.DirSeparator)
-                            fs.Delete entryToDelete
-                            state.UpdateStatesAfterDelete entryToDelete currState.CurrPath
+                            state.DeleteAndUpdateStates entryToDelete currState.CurrPath
                             updateViews()
                         // TODO restore cursor position
                         true
