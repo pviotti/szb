@@ -64,9 +64,9 @@ module ``Sizy Test`` =
 
     let checkSizeHelper (fs: IFileSystem) inputFolder = 
         let fsEntries = ConcurrentDictionary<string, Entry>()
-        let fsController = FsController fs
-        let ls = fsController.List inputFolder
-        let sizes = PSeq.map (fsController.GetSize fsEntries) ls
+        let fsManager = FsManager fs
+        let ls = fsManager.List inputFolder
+        let sizes = PSeq.map (fsManager.GetSize fsEntries) ls
         PSeq.sum sizes
 
     [<Fact>]
@@ -85,5 +85,5 @@ module ``Sizy Test`` =
     [<Theory>]
     [<MemberData("getSizeUnitTestData")>]
     let getSizeUnit (input: int64, outSize: float, outUnit: string) =
-        FsController.GetSizeUnit input |> should equal (outSize, outUnit)
+        FsManager.GetSizeUnit input |> should equal (outSize, outUnit)
 
