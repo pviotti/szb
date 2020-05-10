@@ -41,7 +41,7 @@ type StateManager() =
 
     let getPath state idx =
         let name = state.LstData.[idx].Substring(13)
-        state.CurrPath + string fs.DirSeparator + name.TrimEnd(fs.DirSeparator)
+        state.CurrPath.TrimEnd(fs.DirSeparator) + string fs.DirSeparator + name.TrimEnd(fs.DirSeparator)
 
     member _.GetListViewEntries(ls: seq<string>) =
 
