@@ -5,9 +5,9 @@
 Sizy helps answering this question quickly: *what files or folders are eating up my disk space?*
 
 Through a text-based user interface similar to [mc] or [ranger], it lets you browse the file system tree
-and delete the useless folders and files that take up space.<sup>[1](#myfootnote1)</sup>
+and delete the useless files and directories that take up space.<sup>[1](#myfootnote1)</sup>
 
-:warning: **WARNING** :warning: : this is an alpha-grade work-in-progress project.
+:warning: **WARNING** :warning: : this is a work-in-progress project.
 Feel free to reach out and open issues or prepare PR if you want to
 contribute. :nerd_face:
 
@@ -22,19 +22,19 @@ USAGE: sizy [--help] [--version] [--print-only] [<path>]
 
 INPUT:
 
-    <path>                the folder you want to analyse (default: current folder).
+    <path>                the directory to analyse (default: current directory)
 
 OPTIONS:
 
-    --version             print sizy version.
-    --print-only, -p      output the results to screen and exit.
+    --version             print sizy version
+    --print-only, -p      output the results to screen and exit
     --help                display this list of options.
 ```
 
 ----
-<small><a name="myfootnote1">1</a>: Notice that, as suggested [here][ranger-issue], 
+<sub><a name="myfootnote1">1</a>: Notice that, as suggested [here][ranger-issue], 
 with ranger you can achieve more or less the same result, but just for a single
-level in the file system hierarchy. Besides ranger doesn't run natively on Windows.</small>
+level in the file system hierarchy. Besides ranger doesn't run natively on Windows.</sub>
 
 
  [mc]: https://en.wikipedia.org/wiki/Midnight_Commander
