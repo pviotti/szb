@@ -123,6 +123,11 @@ type StateManager() =
         state <- newState :: newTail
 
 
+[<AbstractClass>]
+type UpdatableList(source: string array, posx: Pos, posy: Pos, width: Dim, height: Dim) =
+    inherit ListView(source, X = posx, Y = posy, Width = width, Height = height)
+    abstract UpdateTui: bool -> unit
+
 type Tui(state: StateManager) =
     let state = state
 
@@ -148,15 +153,18 @@ type Tui(state: StateManager) =
         Label(ustr "", X = Pos.Percent(20.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(80.0f), Height = Dim.Sized(1))
 
     let lstView =
-        { new ListView([||], X = Pos.At(0), Y = Pos.At(2), Width = Dim.Percent(50.0f), Height = Dim.Fill(1)) with
-            member this.ProcessKey(k: KeyEvent) =
+        { new UpdatableList([||], Pos.At(0), Pos.At(2), Dim.Percent(50.0f), Dim.Fill(1)) with
 
-                // TODO this function is duplicate and shouldn't be here
-                let updateViews() =
-                    Application.MainLoop.Invoke(fun () ->
-                        this.SetSource state.CurrentState.LstData
-                        lblPath.Text <- ustr state.CurrentState.CurrPath
-                        lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
+            member this.UpdateTui(preserveCursorPosition) =
+                Application.MainLoop.Invoke(fun () ->
+                    let prevSelectedItem = this.SelectedItem
+                    this.SetSource state.CurrentState.LstData
+                    if preserveCursorPosition && this.Source.Count <> 0 && prevSelectedItem > 0 then
+                        this.SelectedItem <- prevSelectedItem - 1
+                    lblPath.Text <- ustr state.CurrentState.CurrPath
+                    lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
+
+            member this.ProcessKey(k: KeyEvent) =
 
                 let keyChar: char = char k.KeyValue
                 try
@@ -165,25 +173,19 @@ type Tui(state: StateManager) =
                     | _, 'l' when this.Source.Count <> 0 ->
                         if state.IsSelectedItemDir this.SelectedItem then
                             state.AddNewState this.SelectedItem
-                            updateViews()
+                            this.UpdateTui(false)
                         true
                     | Key.CursorLeft, _
                     | _, 'h' ->
                         if state.Length > 1 then
                             state.RemoveCurrentState()
-                            updateViews()
+                            this.UpdateTui(false)
                         true
                     | Key.DeleteChar, _
                     | _, 'd' when this.Source.Count <> 0 ->
                         if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
                             state.DeleteEntry this.SelectedItem
-                            Application.MainLoop.Invoke(fun () ->
-                                let prevSelectedItem = this.SelectedItem
-                                this.SetSource state.CurrentState.LstData
-                                if this.Source.Count <> 0 && prevSelectedItem > 0 then
-                                    this.SelectedItem <- prevSelectedItem - 1
-                                lblPath.Text <- ustr state.CurrentState.CurrPath
-                                lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
+                            this.UpdateTui(true)
                         true
                     | _, 'j' -> this.MoveDown()
                     | _, 'k' -> this.MoveUp()
@@ -194,18 +196,15 @@ type Tui(state: StateManager) =
 
     do
         Application.Init()
-
-        Application.MainLoop.Invoke(fun () ->
-            lstView.SetSource state.CurrentState.LstData
-            lblPath.Text <- ustr state.CurrentState.CurrPath
-            lblTotSize.Text <- ustr state.CurrentState.TotSizeStr)
-
         lblError.TextColor <- Application.Driver.MakeAttribute(Color.Red, Color.Blue)
         window.Add(lblPath)
         window.Add(lstView)
         window.Add(lblTotSize)
         window.Add(lblError)
         Application.Top.Add(window)
+
+    member _.Run() =
+        lstView.UpdateTui(false)
         Application.Run()
 
 
@@ -217,17 +216,17 @@ let main argv =
             if config.Contains Input then config.GetResult Input else fs.GetCurrDir()
 
         let state = StateManager()
+        state.AddNewState path
         try
-            state.AddNewState path
             if config.Contains Print_Only then
                 state.GetListViewEntries state.CurrentState.Ls
                 |> Array.iter (fun x ->
                     printf "%s\n" x)
                 printfn "%s\n%s" (String.replicate 12 "-") state.CurrentState.TotSizeStr
             else
-                Tui(state) |> ignore
+                Tui(state).Run()
             0
-        with ex -> 
+        with ex ->
             eprintfn "Error: %s" ex.Message
             1
     | ReturnVal ret -> ret
