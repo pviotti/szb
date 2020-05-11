@@ -3,6 +3,7 @@
 project.lock.json
 .DS_Store
 *.pyc
+launchSettings.json
 
 # Visual Studio Code
 .vscode
@@ -28,6 +29,7 @@ bld/
 msbuild.log
 msbuild.err
 msbuild.wrn
+*.nupkg
 
 # BenchmarkDotNet
 BenchmarkDotNet.Artifacts
