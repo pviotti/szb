@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>sizy</id>
+    <version>0.9</version>
+    <packageSourceUrl>https://github.com/pviotti/sizy</packageSourceUrl>    
+    <owners>pviotti</owners>
+    <title>sizy</title>
+    <authors>pviotti</authors>    
+    <projectUrl>https://github.com/pviotti/sizy</projectUrl>
+    <projectSourceUrl>https://github.com/pviotti/sizy</projectSourceUrl>
+    <tags>tui disk space</tags>
+    <summary>
+      A simple TUI application to check disk space usage and remove useless files or folders.
+    </summary>
+    <description>
+      Sizy allows you to browse your file system from your terminal
+      and check the disk space occupied by files and folders.
+    </description>
+    <dependencies>
+      <dependency id="dotnetcore-runtime" version="3.1" />
+    </dependencies>    
+  </metadata>
+  <files>
+    <file src="Sizy\bin\Release\netcoreapp3.1\*" target="bin" />
+  </files>
+</package>
