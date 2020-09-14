@@ -11,6 +11,9 @@ and delete the useless files and directories that take up space.<sup>[1](#myfoot
 Feel free to reach out and open issues or prepare PR if you want to
 contribute. :nerd_face:
 
+:newspaper: **UPDATE** :newspaper: : I found [ncdu], which does much of what I need,
+and it's faster too, so I don't think I'll work on this anymore.
+
 ## Usage
 
 ![screenshot](https://user-images.githubusercontent.com/1350095/81344889-7e3fac00-90af-11ea-8ea8-62a27a085e66.png)
@@ -40,3 +43,4 @@ level in the file system hierarchy. Besides ranger doesn't run natively on Windo
  [mc]: https://en.wikipedia.org/wiki/Midnight_Commander
  [ranger]: https://ranger.github.io/
  [ranger-issue]: https://github.com/ranger/ranger/issues/719
+ [ncdu]: https://code.blicky.net/yorhel/ncdu
