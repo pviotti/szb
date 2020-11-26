@@ -139,18 +139,18 @@ type Tui(state: StateManager) =
                     Application.Top.Running <- false
                     true
                 elif k.KeyValue = int '?' then
-                    MessageBox.Query(72, 14, "Help", helpMsg, "OK") |> ignore
+                    MessageBox.Query(72, 14, ustr "Help", ustr helpMsg, ustr "OK") |> ignore
                     true
                 else
                     base.ProcessKey k }
 
-    let lblPath = Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
+    let lblPath = new Label(ustr "", X = Pos.At(0), Y = Pos.At(0), Width = Dim.Fill(), Height = Dim.Sized(1))
 
     let lblTotSize =
-        Label(ustr "Tot.", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(10.0f), Height = Dim.Sized(1))
+        new Label(ustr "Tot.", X = Pos.At(0), Y = Pos.AnchorEnd(1), Width = Dim.Percent(10.0f), Height = Dim.Sized(1))
 
     let lblError =
-        Label(ustr "", X = Pos.Percent(20.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(80.0f), Height = Dim.Sized(1))
+        new Label(ustr "", X = Pos.Percent(20.0f), Y = Pos.AnchorEnd(1), Width = Dim.Percent(80.0f), Height = Dim.Sized(1))
 
     let lstView =
         { new UpdatableList([||], Pos.At(0), Pos.At(2), Dim.Percent(50.0f), Dim.Fill(1)) with
@@ -183,7 +183,7 @@ type Tui(state: StateManager) =
                         true
                     | Key.DeleteChar, _
                     | _, 'd' when this.Source.Count <> 0 ->
-                        if 0 = MessageBox.Query(50, 7, "Delete", "Are you sure you want to delete this?", "Yes", "No") then
+                        if 0 = MessageBox.Query(50, 7, ustr "Delete", ustr "Are you sure you want to delete this?", ustr "Yes", ustr "No") then
                             state.DeleteEntry this.SelectedItem
                             this.UpdateTui(true)
                         true
@@ -196,7 +196,8 @@ type Tui(state: StateManager) =
 
     do
         Application.Init()
-        lblError.TextColor <- Application.Driver.MakeAttribute(Color.Red, Color.Blue)
+        lblError.ColorScheme <- Colors.Error
+        window.ColorScheme <- Colors.Base
         window.Add(lblPath)
         window.Add(lstView)
         window.Add(lblTotSize)
