@@ -226,8 +226,9 @@ let main argv =
                 printfn "%s\n%s" (String.replicate 12 "-") state.CurrentState.TotSizeStr
             else
                 Tui(state).Run()
+                Application.Shutdown()
             0
         with ex ->
-            eprintfn "Error: %s" ex.Message
+            eprintfn "Error: %A" ex
             1
     | ReturnVal ret -> ret
