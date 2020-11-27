@@ -5,6 +5,7 @@ open NStack
 
 open Sizable.FileSystem
 open Sizable.Config
+open System
 open System.IO.Abstractions
 open System.Collections.Concurrent
 open FSharp.Collections.ParallelSeq
@@ -139,7 +140,11 @@ type Tui(state: StateManager) =
                     Application.Top.Running <- false
                     true
                 elif k.KeyValue = int '?' then
-                    MessageBox.Query(72, 14, ustr "Help", ustr helpMsg, ustr "OK") |> ignore
+                    let okBtn = new Button(ustr "OK", true)
+                    okBtn.add_Clicked(Action(Application.RequestStop))
+                    let helpDialog = new Dialog(ustr "help", 72, 14, okBtn)
+                    helpDialog.Add(new Label (Rect(2, 1, 72, 10), ustr helpMsg, TextAlignment = TextAlignment.Left))
+                    Application.Run helpDialog
                     true
                 else
                     base.ProcessKey k }
