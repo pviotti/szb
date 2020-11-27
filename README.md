@@ -1,6 +1,6 @@
 # Sizy
 
-[![.NET Core CI](https://github.com/pviotti/sizy/workflows/.NET%20Core%20CI/badge.svg)](https://github.com/pviotti/sizy/actions?query=workflow%3A%22.NET+Core+CI%22+branch%3Amaster)
+[![.NET CI](https://github.com/pviotti/sizy/workflows/.NET%20CI/badge.svg)](https://github.com/pviotti/sizy/actions?query=workflow%3A%22.NET+CI%22+branch%3Amaster)
 
 Sizy helps answering this question quickly: *what files or folders are eating up my disk space?*
 
@@ -35,7 +35,7 @@ OPTIONS:
 ```
 
 ----
-<sub><a name="myfootnote1">1</a>: Notice that, as suggested [here][ranger-issue], 
+<sub><a name="myfootnote1">1</a>: Notice that, as suggested [here][ranger-issue],
 with ranger you can achieve more or less the same result, but just for a single
 level in the file system hierarchy. Besides ranger doesn't run natively on Windows.</sub>
 
