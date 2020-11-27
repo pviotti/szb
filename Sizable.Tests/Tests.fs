@@ -1,4 +1,4 @@
-namespace Sizy.Test
+namespace Sizable.Test
 
 open System
 open System.Collections.Concurrent
@@ -10,9 +10,9 @@ open FsUnit.Xunit
 
 open FSharp.Collections.ParallelSeq
 
-open Sizy.FileSystem
+open Sizable.FileSystem
 
-module ``Sizy Test`` =
+module ``Sizable Test`` =
 
     let r = Random()
 
@@ -62,7 +62,7 @@ module ``Sizy Test`` =
               1.0
               "G" |] |]
 
-    let checkSizeHelper (fs: IFileSystem) inputFolder = 
+    let checkSizeHelper (fs: IFileSystem) inputFolder =
         let fsEntries = ConcurrentDictionary<string, Entry>()
         let fsManager = FsManager fs
         let ls = fsManager.List inputFolder

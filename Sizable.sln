@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizy", "Sizy\Sizy.fsproj", "{D5DAE646-4E23-4944-956F-0230B617DBA5}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizable", "Sizable\Sizable.fsproj", "{D5DAE646-4E23-4944-956F-0230B617DBA5}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizy.Tests", "Sizy.Tests\Sizy.Tests.fsproj", "{D30034BD-BD41-4D35-A335-51BB54127CEB}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Sizable.Tests", "Sizable.Tests\Sizable.Tests.fsproj", "{D30034BD-BD41-4D35-A335-51BB54127CEB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

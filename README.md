@@ -1,8 +1,8 @@
-# Sizy
+# Sizable
 
-[![.NET CI](https://github.com/pviotti/sizy/workflows/.NET%20CI/badge.svg)](https://github.com/pviotti/sizy/actions?query=workflow%3A%22.NET+CI%22+branch%3Amaster)
+[![.NET CI](https://github.com/pviotti/szb/workflows/.NET%20CI/badge.svg)](https://github.com/pviotti/szb/actions?query=workflow%3A%22.NET+CI%22+branch%3Amaster)
 
-Sizy helps answering this question quickly: *what files or folders are eating up my disk space?*
+Sizable (*szb*) helps answering this question quickly: *what files or folders are eating up my disk space?*
 
 Through a text-based user interface similar to [mc] or [ranger], it lets you browse the file system tree
 and delete the useless files and directories that take up space.<sup>[1](#myfootnote1)</sup>
@@ -21,7 +21,7 @@ and it's faster too, so I don't think I'll work on this anymore.
 To only print the result for the input folder, you can use the `-p` flag.
 
 ```
-USAGE: sizy [--help] [--version] [--print-only] [<path>]
+USAGE: szb [--help] [--version] [--print-only] [<path>]
 
 INPUT:
 
@@ -29,7 +29,7 @@ INPUT:
 
 OPTIONS:
 
-    --version             print sizy version
+    --version             print szb version
     --print-only, -p      output the results to screen and exit
     --help                display this list of options.
 ```

@@ -1,9 +1,9 @@
-namespace Sizy.Benchmarks
+namespace Sizable.Benchmarks
 
 open BenchmarkDotNet.Running
 open BenchmarkDotNet.Attributes
 
-open Sizy.FileSystem
+open Sizable.FileSystem
 
 type Benchmarks () =
     [<ParamsSource("NBytesValues")>]
@@ -19,4 +19,4 @@ module Program =
     let main _ =
         BenchmarkRunner.Run<Benchmarks>() |> ignore
         0
- 
+

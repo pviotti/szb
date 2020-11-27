@@ -1,4 +1,4 @@
-module Sizy.FileSystem
+module Sizable.FileSystem
 
 open System
 open System.IO
@@ -6,22 +6,22 @@ open System.IO.Abstractions
 open System.Collections.Generic
 
 
-type Error = {Name: string; Message: string} 
-type FsEntry = {Name: string; Size: int64; IsDir: bool} 
-type Entry = 
-    | Error of Error 
+type Error = {Name: string; Message: string}
+type FsEntry = {Name: string; Size: int64; IsDir: bool}
+type Entry =
+    | Error of Error
     | FsEntry of FsEntry
 
 // Whether we represent as directories file system entries
 // which we couldn't analyse because of errors
-let ErrorIsDir = true 
+let ErrorIsDir = true
 
 // The size we give to file system entries we couldn't analyse
-let ErrorSize = 0L   
+let ErrorSize = 0L
 
 let SizeUnits = [ "B"; "k"; "M"; "G"; "T"; "P"; "E" ]
 
-type FsManager(fs: IFileSystem) = 
+type FsManager(fs: IFileSystem) =
     let fs = fs
 
     member this.GetSize (fsEntries: IDictionary<string, Entry>) path =
@@ -51,7 +51,7 @@ type FsManager(fs: IFileSystem) =
         else
             fs.File.Delete(path)
 
-    member _.List(path: string) = 
+    member _.List(path: string) =
         fs.Directory.EnumerateFileSystemEntries path
 
     member _.DirSeparator : char = fs.Path.DirectorySeparatorChar
@@ -86,13 +86,13 @@ type FsManager(fs: IFileSystem) =
             sprintf "%10.0f %-1s %s \tError: %s" newSize sizeUnit name msg
 
     static member IsDir (fsEntries: IDictionary<string, Entry>) (path: string) =
-        fsEntries.ContainsKey path && 
+        fsEntries.ContainsKey path &&
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> isDir
             | Error _ -> ErrorIsDir
 
     static member IsFile (fsEntries: IDictionary<string, Entry>) (path: string) =
-        fsEntries.ContainsKey path && 
+        fsEntries.ContainsKey path &&
             match fsEntries.[path] with
             | FsEntry {Name=_; Size=_; IsDir=isDir} -> not isDir
             | Error _ -> not ErrorIsDir

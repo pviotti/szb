@@ -1,10 +1,10 @@
-module Sizy.Config
+module Sizable.Config
 
 open System
 open Argu
 
 let VERSION = Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString()
-let PROGRAM_NAME = "sizy"
+let PROGRAM_NAME = "szb"
 
 
 type Args =
