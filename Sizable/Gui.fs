@@ -1,10 +1,10 @@
-module Sizy.Gui
+module Sizable.Gui
 
 open Terminal.Gui
 open NStack
 
-open Sizy.FileSystem
-open Sizy.Config
+open Sizable.FileSystem
+open Sizable.Config
 open System.IO.Abstractions
 open System.Collections.Concurrent
 open FSharp.Collections.ParallelSeq
