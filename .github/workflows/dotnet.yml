@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  project_name: sizy
+  project_name: szb
 
 jobs:
   test:
