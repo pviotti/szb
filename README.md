@@ -12,11 +12,11 @@ Feel free to reach out and open issues or prepare PR if you want to
 contribute. :nerd_face:
 
 :newspaper: **UPDATE** :newspaper: : I found [ncdu], which does much of what I need,
-and it's faster too, so I don't think I'll work on this anymore.
+so I don't think I'll actively work on this anymore.
 
 ## Usage
 
-![screenshot](https://user-images.githubusercontent.com/1350095/81344889-7e3fac00-90af-11ea-8ea8-62a27a085e66.png)
+![screenshot](https://user-images.githubusercontent.com/1350095/100484430-499b4c80-30f4-11eb-8504-0129cc6d9ebb.png)
 
 To only print the result for the input folder, you can use the `-p` flag.
 
