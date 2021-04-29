@@ -1,0 +1,23 @@
+version: 2
+updates:
+- package-ecosystem: nuget
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: Microsoft.NET.Test.Sdk
+    versions:
+    - "> 16.8.0, < 16.9"
+  - dependency-name: System.IO.Abstractions
+    versions:
+    - "> 13.2.1, < 13.3"
+  - dependency-name: System.IO.Abstractions.TestingHelpers
+    versions:
+    - "> 13.2.1, < 13.3"
+  - dependency-name: Microsoft.NET.Test.Sdk
+    versions:
+    - 16.9.1
+  - dependency-name: coverlet.collector
+    versions:
+    - 3.0.2
